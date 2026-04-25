@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2021 juancarloscp52
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
+ */
+
+package com.poc.sopramod.client.Screens;
+
+import com.poc.sopramod.Sopramod;
+import com.poc.sopramod.SopramodSettings;
+import com.poc.sopramod.client.Screens.Widgets.SopramodEventListWidget;
+import com.poc.sopramod.client.Screens.Widgets.SopramodEventListWidget.FilterMode;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.ArrayList;
+
+public class SopramodEventConfigurationScreen extends Screen {
+    SopramodSettings settings = Sopramod.getInstance().settings;
+
+    SopramodEventListWidget list;
+
+    Screen parent;
+
+    CycleButton<SopramodEventListWidget.FilterMode> filterEvents;
+
+    public SopramodEventConfigurationScreen(Screen parent) {
+        super(Component.translatable("sopramod.options.disableEvents"));
+        this.parent = parent;
+    }
+
+    @Override
+    protected void init() {
+        list = addRenderableWidget(new SopramodEventListWidget(Minecraft.getInstance(), this.width, this.height - 65 - 30, 0, 65, 25));
+        this.addWidget(list);
+        // Done button
+        Button done = Button.builder(CommonComponents.GUI_DONE, button -> onDone()).pos(this.width / 2 - 100, this.height - 26).width(200).build();
+        this.addRenderableWidget(done);
+        // Check all button
+        Button checkAll = Button.builder(Component.translatable("sopramod.options.checkAllEvents"), button -> onCheckAll()).pos(this.width / 2 - 100 - 100, this.height - 26).width(100).build();
+
+        this.addRenderableWidget(checkAll);
+        // Uncheck all button
+        Button uncheckAll = Button.builder(Component.translatable("sopramod.options.uncheckAllEvents"), button -> onUncheckAll()).pos(this.width / 2 - 100 + 200, this.height - 26).width(100).build();
+        this.addRenderableWidget(uncheckAll);
+
+        // Search box
+        Component searchText = Component.translatable("sopramod.options.search");
+        EditBox search = new EditBox(Minecraft.getInstance().font, this.width / 2 - 170, 29, 200, 20, searchText);
+        search.setHint(searchText);
+        setInitialFocus(search);
+        search.setResponder(newText -> list.updateVisibleEntries(newText, filterEvents.getValue()));
+        this.addRenderableWidget(search);
+
+        // Filter events button
+        filterEvents = CycleButton.<SopramodEventListWidget.FilterMode>builder(mode -> mode.text, () -> FilterMode.ALL)
+                .withValues(FilterMode.values())
+                .create(this.width / 2 + 40, 29, 120, 20, Component.translatable("sopramod.options.filterEvents"), (button, newValue) -> list.updateVisibleEntries(search.getValue(), newValue));
+        this.addRenderableWidget(filterEvents);
+    }
+
+    @Override
+    public void render(GuiGraphics drawContext, int mouseX, int mouseY, float delta) {
+        super.render(drawContext, mouseX, mouseY, delta);
+        drawContext.drawString(font, this.title, this.width / 2 - font.width(this.title) / 2, 12, 0xFFE0E0E0);
+        SopramodConfigurationScreen.drawLogo(drawContext);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (super.mouseReleased(event)) {
+            return true;
+        } else return this.list.mouseReleased(event);
+    }
+
+    private void onDone() {
+        settings.disabledEventTypes = new ArrayList<>();
+        this.list.children().forEach(buttonEntry -> {
+            if (!buttonEntry.checkbox.selected())
+                settings.disabledEventTypes.add(buttonEntry.eventInfo.typeReference().key());
+        });
+        Sopramod.getInstance().saveSettings();
+        onClose();
+    }
+
+    private void onCheckAll() {
+        MouseButtonInfo info = new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0);
+        this.list.children().forEach(buttonEntry -> {
+            if (buttonEntry.checkbox.visible && !buttonEntry.checkbox.selected() && buttonEntry.eventInfo.typeReference().value().isEnabled()) {
+                buttonEntry.checkbox.onPress(info);
+            }
+        });
+    }
+
+    private void onUncheckAll() {
+        MouseButtonInfo info = new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0);
+        this.list.children().forEach(buttonEntry -> {
+            if (buttonEntry.checkbox.visible && buttonEntry.checkbox.selected() && buttonEntry.eventInfo.typeReference().value().isEnabled()) {
+                buttonEntry.checkbox.onPress(info);
+            }
+        });
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.setScreen(this.parent);
+    }
+}

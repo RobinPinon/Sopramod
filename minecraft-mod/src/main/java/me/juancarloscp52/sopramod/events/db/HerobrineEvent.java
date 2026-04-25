@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2021 juancarloscp52
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
+ */
+
+package com.poc.sopramod.events.db;
+
+import com.poc.sopramod.Sopramod;
+import com.poc.sopramod.Variables;
+import com.poc.sopramod.client.SopramodClient;
+import com.poc.sopramod.client.SopramodClientUtils;
+import com.poc.sopramod.events.AbstractTimedEvent;
+import com.poc.sopramod.events.EventCategory;
+import com.poc.sopramod.events.EventType;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.Random;
+
+public class HerobrineEvent extends AbstractTimedEvent {
+
+    public static final EventType<HerobrineEvent> TYPE = EventType.builder(HerobrineEvent::new).category(EventCategory.FOG).build();
+    private static final Identifier VIGNETTE_TEXTURE = Identifier.fromNamespaceAndPath("sopramod", "textures/vignette.png");
+    Random random;
+    Minecraft client;
+
+    public HerobrineEvent() {
+        random = new Random();
+    }
+
+
+    @Override
+    @Environment(EnvType.CLIENT)
+    public void initClient() {
+        client = Minecraft.getInstance();
+        Variables.herobrineFog = true;
+        client.getSoundManager().pauseAllExcept(SoundSource.UI);
+
+    }
+
+    @Override
+    @Environment(EnvType.CLIENT)
+    public void endClient() {
+        Variables.herobrineFog = false;
+        client = Minecraft.getInstance();
+        client.getSoundManager().stop(SopramodClient.herobrineAmbienceID, SoundSource.BLOCKS);
+        client.getSoundManager().resume();
+        super.endClient();
+    }
+
+    @Override
+    @Environment(EnvType.CLIENT)
+    public void render(GuiGraphics drawContext, DeltaTracker tickCounter) {
+        float sin = 0.75f + Mth.abs(0.25f * Mth.sin(getTickCount() * 0.0625f));
+        SopramodClientUtils.renderOverlay(drawContext, VIGNETTE_TEXTURE, ARGB.colorFromFloat(1.0F, sin, sin, sin));
+    }
+
+    @Override
+    public void tick() {
+        if (getTickCount() % 20 == 0)
+            Sopramod.getInstance().eventHandler.getActivePlayers().forEach(serverPlayerEntity -> {
+                if (random.nextInt(100) >= 95)
+                    serverPlayerEntity.hurt(serverPlayerEntity.damageSources().generic(), 1);
+            });
+
+        super.tick();
+    }
+
+    @Override
+    @Environment(EnvType.CLIENT)
+    public void tickClient() {
+        Player player = client.player;
+        if (getTickCount() % 10 == 0) {
+            playStepSound(getLandingPos(), player.level().getBlockState(getLandingPos()));
+        }
+
+        if (getTickCount() % 70 == 0) {
+            player.level().playSound(player, player.blockPosition(), SopramodClient.herobrineAmbience, SoundSource.BLOCKS, 1, 0.9f);
+        }
+
+        super.tickClient();
+    }
+
+    @Override
+    public short getDuration() {
+        return (short) (super.getDuration() * 1.25);
+    }
+
+
+    @Environment(EnvType.CLIENT)
+    private BlockPos getLandingPos() {
+        Player player = client.player;
+        int i = Mth.floor(player.position().x);
+        int j = Mth.floor(player.position().y - 0.20000000298023224D);
+        int k = Mth.floor(player.position().z);
+        BlockPos blockPos = new BlockPos(i, j, k);
+        if (player.level().getBlockState(blockPos).isAir()) {
+            BlockPos blockPos2 = blockPos.below();
+            BlockState blockState = player.level().getBlockState(blockPos2);
+            Block block = blockState.getBlock();
+            if (block.defaultBlockState().is(BlockTags.FENCES) || block.defaultBlockState().is(BlockTags.WALLS) || block instanceof FenceGateBlock) {
+                return blockPos2;
+            }
+        }
+        return blockPos;
+    }
+
+    @Environment(EnvType.CLIENT)
+    private void playStepSound(BlockPos pos, BlockState state) {
+        Player player = client.player;
+        if (!state.liquid()) {
+            BlockState blockState = player.level().getBlockState(pos.above());
+            SoundType blockSoundGroup = blockState.is(Blocks.SNOW) ? blockState.getSoundType() : state.getSoundType();
+            player.playSound(blockSoundGroup.getStepSound(), blockSoundGroup.getVolume() * 0.25F, blockSoundGroup.getPitch());
+        }
+    }
+
+    @Override
+    public EventType<HerobrineEvent> getType() {
+        return TYPE;
+    }
+}

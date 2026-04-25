@@ -1,0 +1,9 @@
+{
+  "values": [
+    {
+      "id": "#minecraft:piglin_loved",
+      "required": false
+    },
+    "minecraft:gold_nugget"
+  ]
+}

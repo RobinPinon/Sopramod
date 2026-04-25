@@ -1,0 +1,43 @@
+/*
+ * Copyright (c) 2021 juancarloscp52
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
+ */
+
+package com.poc.sopramod.events.db;
+
+import com.poc.sopramod.events.AbstractAttributeEvent;
+import com.poc.sopramod.events.EventType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+
+import java.util.List;
+
+public class ReducedReachEvent extends AbstractAttributeEvent {
+    public static final EventType<ReducedReachEvent> TYPE = EventType.builder(ReducedReachEvent::new).build();
+
+    @Override
+    protected List<ActiveModifier> getModifiers() {
+        return List.of(
+            new ActiveModifier(Attributes.BLOCK_INTERACTION_RANGE, new AttributeModifier(Identifier.fromNamespaceAndPath("sopramod", "block_reach"), -2.5d, AttributeModifier.Operation.ADD_VALUE)),
+            new ActiveModifier(Attributes.ENTITY_INTERACTION_RANGE, new AttributeModifier(Identifier.fromNamespaceAndPath("sopramod", "entity_reach"), -2.5d, AttributeModifier.Operation.ADD_VALUE))
+        );
+    }
+
+    @Override
+    public EventType<ReducedReachEvent> getType() {
+        return TYPE;
+    }
+}

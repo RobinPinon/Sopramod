@@ -1,0 +1,52 @@
+{
+  "targets": {
+    "swap": {}
+  },
+  "passes": [
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "sopramod:program/wobble",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "minecraft:main"
+        }
+      ],
+      "output": "swap",
+      "uniforms": {
+        "WobbleConfig": [
+          {
+            "name": "Frequency",
+            "type": "vec2",
+            "value": [ 254, 128 ]
+          },
+          {
+            "name": "WobbleAmount",
+            "type": "vec2",
+            "value": [ 0.002, 0.002 ]
+          }
+        ]
+      }
+    },
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "minecraft:post/blit",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap"
+        }
+      ],
+      "uniforms": {
+        "BlitConfig": [
+          {
+            "name": "ColorModulate",
+            "type": "vec4",
+            "value": [ 1.0, 1.0, 1.0, 1.0 ]
+          }
+        ]
+      },
+      "output": "minecraft:main"
+    }
+  ]
+}

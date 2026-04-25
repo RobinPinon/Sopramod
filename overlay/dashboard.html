@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chaos Dashboard Local</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      padding: 16px;
+    }
+    .top {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    input {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #1b1b1b;
+      color: #fff;
+    }
+    button {
+      padding: 8px 10px;
+      border: 1px solid #2b2b2b;
+      border-radius: 6px;
+      background: #2c2c2c;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3a3a3a;
+    }
+    #events {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
+    }
+    #status {
+      margin-top: 14px;
+      color: #9cd0ff;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Chaos Events - Test local</h2>
+  <div class="top">
+    <input id="user" value="LOCAL_TESTER" />
+    <input id="duration" type="number" value="10" min="1" />
+    <button id="refresh">Recharger la liste</button>
+  </div>
+  <div id="events"></div>
+  <div id="status"></div>
+
+  <script>
+    const eventsWrap = document.getElementById("events");
+    const statusEl = document.getElementById("status");
+    const userEl = document.getElementById("user");
+    const durationEl = document.getElementById("duration");
+    const refreshBtn = document.getElementById("refresh");
+
+    async function loadEvents() {
+      statusEl.textContent = "Chargement des events...";
+      eventsWrap.innerHTML = "";
+      try {
+        const res = await fetch("http://localhost:3000/events");
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const events = Array.isArray(data.events) ? data.events : [];
+
+        for (const eventName of events) {
+          const btn = document.createElement("button");
+          btn.textContent = eventName;
+          btn.onclick = () => triggerEvent(eventName);
+          eventsWrap.appendChild(btn);
+        }
+
+        statusEl.textContent = `${events.length} events chargés.`;
+      } catch (err) {
+        statusEl.textContent = `Impossible de charger les events: ${String(err)}`;
+      }
+    }
+
+    async function triggerEvent(eventName) {
+      const by = encodeURIComponent(userEl.value || "LOCAL_TESTER");
+      const duration = encodeURIComponent(durationEl.value || "10");
+      const title = encodeURIComponent(eventName);
+      const url = `http://localhost:3000/test?title=${title}&by=${by}&duration=${duration}`;
+
+      try {
+        await fetch(url);
+        statusEl.textContent = `Event envoyé: ${eventName}`;
+      } catch (err) {
+        statusEl.textContent = `Erreur envoi event: ${String(err)}`;
+      }
+    }
+
+    refreshBtn.addEventListener("click", loadEvents);
+    loadEvents();
+  </script>
+</body>
+</html>

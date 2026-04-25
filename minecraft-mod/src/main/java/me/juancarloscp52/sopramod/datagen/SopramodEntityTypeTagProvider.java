@@ -1,0 +1,30 @@
+package com.poc.sopramod.datagen;
+
+import com.poc.sopramod.SopramodTags.EntityTypeTags;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider.EntityTypeTagProvider;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.world.entity.EntityType;
+
+import java.util.concurrent.CompletableFuture;
+
+public class SopramodEntityTypeTagProvider extends EntityTypeTagProvider {
+    public SopramodEntityTypeTagProvider(FabricDataOutput output, CompletableFuture<Provider> completableFuture) {
+        super(output, completableFuture);
+    }
+
+    @Override
+    protected void addTags(Provider wrapperLookup) {
+        valueLookupBuilder(EntityTypeTags.DO_NOT_EXPLODE).add(EntityType.ENDER_DRAGON, EntityType.PLAYER);
+        valueLookupBuilder(EntityTypeTags.DO_NOT_IGNITE).add(EntityType.PLAYER);
+        valueLookupBuilder(EntityTypeTags.IGNORED_BY_FORCEFIELD_AND_ENTITY_MAGNET).add(EntityType.AREA_EFFECT_CLOUD,
+                EntityType.END_CRYSTAL,
+                EntityType.GLOW_ITEM_FRAME,
+                EntityType.ITEM_FRAME,
+                EntityType.LEASH_KNOT,
+                EntityType.LIGHTNING_BOLT,
+                EntityType.MARKER,
+                EntityType.PAINTING,
+                EntityType.PLAYER);
+    }
+}

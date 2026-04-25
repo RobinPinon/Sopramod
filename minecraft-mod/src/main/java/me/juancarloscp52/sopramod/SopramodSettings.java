@@ -1,0 +1,59 @@
+/*
+ * Copyright (c) 2021 juancarloscp52
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
+ */
+
+package com.poc.sopramod;
+
+import com.poc.sopramod.events.EventType;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class SopramodSettings {
+
+    public enum UIStyle {
+        GTAV("sopramod.options.ui.gtav"), MINECRAFT("sopramod.options.ui.minecraft");
+
+        public final Component text;
+        public final Component tooltip;
+
+        private UIStyle(String text) {
+            this.text = Component.translatable(text);
+            this.tooltip = Component.translatable(text + ".tooltip");
+        }
+    }
+
+    public enum VotingMode {
+        MAJORITY("sopramod.options.votingMode.majority"), PROPORTIONAL("sopramod.options.votingMode.proportional");
+
+        public final Component text;
+        public final Component tooltip;
+
+        private VotingMode(String text) {
+            this.text = Component.translatable(text);
+            this.tooltip = Component.translatable(text + ".tooltip");
+        }
+    }
+    public short timerDuration = 900;
+    public short baseEventDuration = 600;
+    public boolean integrations = false;
+    public VotingMode votingMode = VotingMode.PROPORTIONAL;
+    public UIStyle UIstyle = UIStyle.GTAV;
+    public List<ResourceKey<EventType<?>>> disabledEventTypes = new ArrayList<>();
+    public boolean accessibilityMode = false;
+}

@@ -1,0 +1,66 @@
+{
+  "targets": {
+    "swap": {},
+    "swap2": {}
+  },
+  "passes": [
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "minecraft:post/bits",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "minecraft:main"
+        }
+      ],
+      "uniforms": {
+        "BitsConfig": [
+          {
+            "name": "Resolution",
+            "type": "float",
+            "value": 4.0
+          },
+          {
+            "name": "MosaicSize",
+            "type": "float",
+            "value": 8.0
+          }
+        ]
+      },
+      "output": "swap"
+    },
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "sopramod:program/scan_pincushion",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap"
+        }
+      ],
+      "output": "swap2"
+    },
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "sopramod:program/ntsc_encode",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap2"
+        }
+      ],
+      "output": "swap"
+    },
+    {
+      "vertex_shader": "minecraft:core/screenquad",
+      "fragment_shader": "sopramod:program/ntsc_decode",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap"
+        }
+      ],
+      "output": "minecraft:main"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.poc.sopramod.mixin",
+  "compatibilityLevel": "JAVA_16",
+  "mixins": [
+    "BlockMixin",
+    "BlockStateBaseMixin",
+    "CatInvoker",
+    "EntityMixin",
+    "FallingBlockEntityAccessor",
+    "LivingEntityMixin",
+    "RabbitInvoker",
+    "WolfInvoker"
+  ],
+  "client": [
+    "BossHealthOverlayAccessor",
+    "BossHealthOverlayMixin",
+    "CameraMixin",
+    "CameraTypeMixin",
+    "ClientLevelMixin",
+    "FogRendererAccessor",
+    "GameRendererAccessor",
+    "GameRendererMixin",
+    "KeyboardInputMixin",
+    "LivingEntityRendererMixin",
+    "LocalPlayerMixin",
+    "MinecraftAccessor",
+    "MouseHandlerMixin",
+    "MthMixin",
+    "MultiPlayerGameModeAccessor",
+    "OptionsScreenMixin",
+    "ScreenEffectRendererMixin",
+    "SheepRendererMixin",
+    "SoundEngineMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

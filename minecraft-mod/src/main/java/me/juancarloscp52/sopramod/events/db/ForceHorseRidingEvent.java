@@ -1,0 +1,56 @@
+package com.poc.sopramod.events.db;
+
+import com.poc.sopramod.Sopramod;
+import com.poc.sopramod.Variables;
+import com.poc.sopramod.events.AbstractTimedEvent;
+import com.poc.sopramod.events.EventType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.equine.Horse;
+import net.minecraft.world.item.Items;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ForceHorseRidingEvent extends AbstractTimedEvent {
+    public static final EventType<ForceHorseRidingEvent> TYPE = EventType.builder(ForceHorseRidingEvent::new).build();
+    private List<Horse> spawnedHorses = new ArrayList<>();
+
+    @Override
+    public void initClient() {
+        Variables.forceRiding = true;
+    }
+
+    @Override
+    public void init() {
+        Sopramod.getInstance().eventHandler.getActivePlayers().forEach(player -> {
+            spawnedHorses.add(EntityType.HORSE.spawn(player.level(), horse -> {
+                horse.tameWithName(player);
+                horse.setItemSlot(EquipmentSlot.SADDLE, Items.SADDLE.getDefaultInstance());
+                horse.setInvulnerable(true);
+                player.startRiding(horse);
+            }, player.blockPosition(), EntitySpawnReason.EVENT, false, false));
+        });
+        Variables.forceRiding = true;
+    }
+
+    @Override
+    public void endClient() {
+        super.endClient();
+        Variables.forceRiding = false;
+    }
+
+    @Override
+    public void end() {
+        super.end();
+        Variables.forceRiding = false;
+        spawnedHorses.forEach(Entity::discard);
+    }
+
+    @Override
+    public EventType<ForceHorseRidingEvent> getType() {
+        return TYPE;
+    }
+}
