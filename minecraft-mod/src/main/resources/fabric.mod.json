@@ -5,7 +5,7 @@
   "name": "SopraMod: Chaos Mod",
   "description": "SopraMod is a Chaos Mod where random events happens every 30 seconds. This mod includes Youtube/Twitch/Discord integration for voting events!",
   "authors": [
-    "juancarloscp52",
+    "sopralus",
     "bl4ckscor3",
     "Kanawanagasaki",
     "slicedlime",
@@ -14,24 +14,24 @@
   ],
   "contact": {
     "homepage": "https://www.curseforge.com/minecraft/mc-mods/sopramod",
-    "sources": "https://github.com/juancarloscp52/SopraMod",
-    "issues": "https://github.com/juancarloscp52/SopraMod/issues"
+    "sources": "https://github.com/sopralus/SopraMod",
+    "issues": "https://github.com/sopralus/SopraMod/issues"
   },
   "license": "GPL-3.0",
   "icon": "assets/sopramod/icon.png",
   "environment": "*",
   "entrypoints": {
     "client": [
-      "me.juancarloscp52.sopramod.client.SopraModClient"
+      "com.poc.sopramod.client.SopramodClient"
     ],
     "main": [
-      "me.juancarloscp52.sopramod.SopraMod"
+      "com.poc.sopramod.Sopramod"
     ],
     "modmenu": [
-      "me.juancarloscp52.sopramod.client.SopraModModMenu"
+      "com.poc.sopramod.client.SopramodModMenu"
     ],
     "fabric-datagen": [
-      "me.juancarloscp52.sopramod.datagen.SopraModDataGen"
+      "com.poc.sopramod.datagen.SopramodDataGen"
     ]
   },
   "mixins": [

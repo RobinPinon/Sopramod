@@ -49,7 +49,7 @@
   </style>
 </head>
 <body>
-  <h2>Chaos Events - Test local</h2>
+  <h2>Chaos Events - Force local</h2>
   <div class="top">
     <input id="user" value="LOCAL_TESTER" />
     <input id="duration" type="number" value="10" min="1" />
@@ -65,14 +65,41 @@
     const durationEl = document.getElementById("duration");
     const refreshBtn = document.getElementById("refresh");
 
+    async function fetchWithTimeout(url, ms = 2500) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), ms);
+      try {
+        return await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     async function loadEvents() {
       statusEl.textContent = "Chargement des events...";
       eventsWrap.innerHTML = "";
       try {
-        const res = await fetch("http://localhost:3000/events");
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
+        // Source unique: registre central du mod.
+        const endpoints = [
+          "http://127.0.0.1:3010/events",
+          "http://localhost:3010/events"
+        ];
+        let res = null;
+        let lastError = null;
+        for (const endpoint of endpoints) {
+          try {
+            const candidate = await fetchWithTimeout(endpoint, 2500);
+            if (candidate.ok) {
+              res = candidate;
+              break;
+            }
+            lastError = new Error(`HTTP ${candidate.status} on ${endpoint}`);
+          } catch (err) {
+            lastError = err;
+          }
         }
+        if (!res) throw lastError ?? new Error("Endpoint /events du mod indisponible");
+
         const data = await res.json();
         const events = Array.isArray(data.events) ? data.events : [];
 
@@ -85,21 +112,38 @@
 
         statusEl.textContent = `${events.length} events chargés.`;
       } catch (err) {
-        statusEl.textContent = `Impossible de charger les events: ${String(err)}`;
+        statusEl.textContent = `Impossible de charger les events du registre central: ${String(err)}. Lance Minecraft avec le mod pour activer http://127.0.0.1:3010/events`;
       }
     }
 
+    function toForcedEventId(eventName) {
+      return eventName
+        .toLowerCase()
+        .replace(/\u2019/g, "'")
+        .replace(/[\!\(\)]/g, "")
+        .replace(/'/g, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    }
+
     async function triggerEvent(eventName) {
-      const by = encodeURIComponent(userEl.value || "LOCAL_TESTER");
+      const by = encodeURIComponent(userEl.value || "killer");
       const duration = encodeURIComponent(durationEl.value || "10");
-      const title = encodeURIComponent(eventName);
-      const url = `http://localhost:3000/test?title=${title}&by=${by}&duration=${duration}`;
+      const forcedEventId = encodeURIComponent(eventName.includes("_") ? eventName : toForcedEventId(eventName));
+      const url = `http://127.0.0.1:3010/force-event?event=${forcedEventId}&by=${by}&duration=${duration}`;
 
       try {
-        await fetch(url);
-        statusEl.textContent = `Event envoyé: ${eventName}`;
+        const res = await fetch(url);
+        const txt = await res.text();
+        let payload = {};
+        try { payload = JSON.parse(txt); } catch (_) {}
+        if (!res.ok || payload.ok === false) {
+          const reason = payload.error || `HTTP ${res.status}`;
+          throw new Error(`${reason} (${forcedEventId})`);
+        }
+        statusEl.textContent = `Event forcé: ${eventName} (by ${decodeURIComponent(by)})`;
       } catch (err) {
-        statusEl.textContent = `Erreur envoi event: ${String(err)}`;
+        statusEl.textContent = `Erreur force-event: ${String(err)} (le mod doit être lancé en jeu)`;
       }
     }
 

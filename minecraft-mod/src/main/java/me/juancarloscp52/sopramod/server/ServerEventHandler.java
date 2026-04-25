@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 juancarloscp52
+ * Copyright (c) 2026 sopralus
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,9 @@ import net.minecraft.world.flag.FeatureFlags;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 public class ServerEventHandler {
@@ -48,6 +50,10 @@ public class ServerEventHandler {
     public VotingServer voting;
     private boolean started = false;
     private short eventCountDown;
+    private final ConcurrentLinkedQueue<ForcedEventRequest> forcedEvents = new ConcurrentLinkedQueue<>();
+
+    private record ForcedEventRequest(String eventId, String triggeredBy) {}
+    public record ForcedEventResult(boolean ok, String code, String eventId, String label) {}
 
 
     public void init(MinecraftServer server) {
@@ -66,6 +72,8 @@ public class ServerEventHandler {
 
         if (!this.started)
             return;
+
+        processForcedEvents();
 
         //Reset timer if countdown is larger than timer duration. This prevents errors while manually executing timer speed events.
         if(eventCountDown>settings.timerDuration/Variables.timerMultiplier)
@@ -132,7 +140,34 @@ public class ServerEventHandler {
         eventCountDown--;
     }
 
+    private void processForcedEvents() {
+        ForcedEventRequest req;
+        while ((req = forcedEvents.poll()) != null) {
+            String requested = normalizeForcedEventId(req.eventId());
+            Optional<EventType<?>> eventType = EventRegistry.EVENTS.listElements()
+                .map(Holder::value)
+                .filter(type -> normalizeForcedEventId(EventRegistry.getEventId(type).identifier().getPath()).equals(requested))
+                .findFirst();
+
+            if (eventType.isEmpty()) {
+                Sopramod.LOGGER.warn("Forced event ignored, unknown id: {}", req.eventId());
+                continue;
+            }
+
+            Event event = eventType.get().create();
+            String by = (req.triggeredBy() == null || req.triggeredBy().isBlank()) ? "killer" : req.triggeredBy();
+            if (runEvent(event, by)) {
+                resetTimer();
+                Sopramod.LOGGER.info("Forced event executed: {} by {}", req.eventId(), by.toLowerCase(Locale.ROOT));
+            }
+        }
+    }
+
     public boolean runEvent(Event event) {
+        return runEvent(event, "");
+    }
+
+    public boolean runEvent(Event event, String triggeredBy) {
         if (event == null) {
             Sopramod.LOGGER.info("New Event not found");
             return false;
@@ -150,13 +185,14 @@ public class ServerEventHandler {
         event.init();
         currentEvents.add(event);
 
-        sendEventToPlayers(event);
+        sendEventToPlayers(event, triggeredBy);
         return true;
     }
 
-    private void sendEventToPlayers(Event event) {
+    private void sendEventToPlayers(Event event, String triggeredBy) {
+        String displayName = triggeredBy == null ? "" : triggeredBy.trim();
         PlayerLookup.all(server).forEach(serverPlayerEntity ->
-                ServerPlayNetworking.send(serverPlayerEntity, new ClientboundAddEvent(event)));
+                ServerPlayNetworking.send(serverPlayerEntity, new ClientboundAddEvent(event, displayName)));
     }
 
     public void endChaos() {
@@ -175,6 +211,52 @@ public class ServerEventHandler {
 
     public void resetTimer(){
         eventCountDown = (short) (settings.timerDuration/Variables.timerMultiplier);
+    }
+
+    public void enqueueForcedEvent(String eventId, String triggeredBy) {
+        if (eventId == null || eventId.isBlank()) {
+            return;
+        }
+        forcedEvents.add(new ForcedEventRequest(eventId.trim(), triggeredBy));
+    }
+
+    public ForcedEventResult forceEventNow(String eventId, String triggeredBy) {
+        if (eventId == null || eventId.isBlank()) {
+            return new ForcedEventResult(false, "missing_event", "", "");
+        }
+
+        String requested = normalizeForcedEventId(eventId);
+        Optional<EventType<?>> eventType = EventRegistry.EVENTS.listElements()
+            .map(Holder::value)
+            .filter(type -> normalizeForcedEventId(EventRegistry.getEventId(type).identifier().getPath()).equals(requested))
+            .findFirst();
+
+        if (eventType.isEmpty()) {
+            return new ForcedEventResult(false, "unknown_event", eventId, "");
+        }
+
+        Event event = eventType.get().create();
+        String by = (triggeredBy == null || triggeredBy.isBlank()) ? "killer" : triggeredBy;
+        if (!runEvent(event, by)) {
+            return new ForcedEventResult(false, "event_rejected", eventId, "");
+        }
+
+        resetTimer();
+        String label = event.getDescription().getString();
+        Sopramod.LOGGER.info("Forced event executed now: {} by {}", eventId, by.toLowerCase(Locale.ROOT));
+        return new ForcedEventResult(true, "ok", eventId, label);
+    }
+
+    private static String normalizeForcedEventId(String value) {
+        return value
+            .trim()
+            .toLowerCase(Locale.ROOT)
+            .replace(" ", "_")
+            .replace("-", "_")
+            .replace("'", "")
+            .replace("!", "")
+            .replace("(", "")
+            .replace(")", "");
     }
 
 

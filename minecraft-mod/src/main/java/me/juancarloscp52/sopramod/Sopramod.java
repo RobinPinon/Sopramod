@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 juancarloscp52
+ * Copyright (c) 2026 sopralus
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ import com.poc.sopramod.networking.ClientboundJoinSync;
 import com.poc.sopramod.networking.ClientboundRemoveEnded;
 import com.poc.sopramod.networking.NetworkingConstants;
 import com.poc.sopramod.server.ConstantColorDustParticleOptions;
+import com.poc.sopramod.server.LocalOverrideHttpServer;
 import com.poc.sopramod.server.ServerEventHandler;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
@@ -65,6 +66,7 @@ public class Sopramod implements ModInitializer {
     public static Sopramod instance;
     public ServerEventHandler eventHandler;
     public SopramodSettings settings;
+    private final LocalOverrideHttpServer localOverrideHttpServer = new LocalOverrideHttpServer();
     public static final ParticleType<ConstantColorDustParticleOptions> CONSTANT_COLOR_DUST = FabricParticleTypes.complex(false, ConstantColorDustParticleOptions.CODEC, ConstantColorDustParticleOptions.PACKET_CODEC);
 
     private static final DynamicCommandExceptionType ERROR_INVALID_ON_CLIENT = new DynamicCommandExceptionType(eventId -> Component.translatable("sopramod.command.invalidClientSide", eventId));
@@ -80,6 +82,7 @@ public class Sopramod implements ModInitializer {
         loadSettings();
         LOGGER.info("Sopramod Started");
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, Identifier.fromNamespaceAndPath("sopramod", "constant_color_dust"), CONSTANT_COLOR_DUST);
+        localOverrideHttpServer.start();
 
         ServerPlayNetworking.registerGlobalReceiver(NetworkingConstants.JOIN_HANDSHAKE, (handshake, context) -> {
             String version = FabricLoader.getInstance().getModContainer("sopramod").get().getMetadata().getVersion().getFriendlyString();
@@ -133,6 +136,7 @@ public class Sopramod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             if (eventHandler != null)
                 eventHandler.endChaos();
+            localOverrideHttpServer.stop();
         });
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(LiteralArgumentBuilder.<CommandSourceStack>literal("sopramod")

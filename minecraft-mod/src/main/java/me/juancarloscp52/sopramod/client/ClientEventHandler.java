@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 juancarloscp52
+ * Copyright (c) 2026 sopralus
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,12 @@ import com.poc.sopramod.client.integrations.IntegrationType;
 import com.poc.sopramod.events.Event;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +41,9 @@ import java.util.List;
 
 public class ClientEventHandler {
 
+    /** Durée d'affichage de la bannière « event démarré » (toutes origines), en ticks client. */
+    private static final int EVENT_ANNOUNCEMENT_TICKS = 100;
+    private static final float VERTICAL_SCREEN_BORDER_RATIO = 0.341f;
 
     public List<Event> currentEvents = new ArrayList<>();
     public VotingClient votingClient;
@@ -46,6 +54,10 @@ public class ClientEventHandler {
     UIRenderer renderer = null;
     final short timerDurationFinal;
     boolean serverIntegrations;
+
+    private Component eventAnnouncementTitle;
+    private String eventAnnouncementUser;
+    private int eventAnnouncementTicksLeft;
 
     public ClientEventHandler(short timerDuration, short baseEventDuration, boolean enableIntegrations) {
         this.client = Minecraft.getInstance();
@@ -89,6 +101,9 @@ public class ClientEventHandler {
                     event.tickClient();
             }
         }
+        if (eventAnnouncementTicksLeft > 0) {
+            eventAnnouncementTicksLeft--;
+        }
     }
 
     public void render(GuiGraphics drawContext, DeltaTracker tickCounter) {
@@ -126,19 +141,70 @@ public class ClientEventHandler {
             votingClient.render(drawContext);
         }
 
+        renderEventAnnouncementBanner(drawContext);
     }
 
     public void remove(byte index) {
         currentEvents.remove(index);
     }
 
-    public void addEvent(Event event) {
+    public void addEvent(Event event, String triggeredBy) {
         if(!client.player.isSpectator() && event.getType().isEnabled())
             event.initClient();
+        eventAnnouncementTitle = event.getDescription().copy();
+        eventAnnouncementUser = (triggeredBy == null || triggeredBy.isBlank()) ? null : triggeredBy.trim();
+        eventAnnouncementTicksLeft = EVENT_ANNOUNCEMENT_TICKS;
         currentEvents.add(event);
     }
 
+    private void renderEventAnnouncementBanner(GuiGraphics drawContext) {
+        if (eventAnnouncementTitle == null || eventAnnouncementTicksLeft <= 0) {
+            return;
+        }
+        Font font = client.font;
+        int screenW = client.getWindow().getGuiScaledWidth();
+        int screenH = client.getWindow().getGuiScaledHeight();
+        float titleScale = 1.8f;
+        int borderWidth = Mth.floor(screenW * VERTICAL_SCREEN_BORDER_RATIO);
+        int maxOverlayWidth = Math.max(60, screenW - (borderWidth * 2));
+
+        // Event title on top, rendered bigger.
+        int titleMaxWidth = Math.max(30, (int) (maxOverlayWidth / titleScale));
+        List<FormattedCharSequence> titleLines = font.split(eventAnnouncementTitle, titleMaxWidth);
+        List<FormattedCharSequence> userLines = eventAnnouncementUser == null
+            ? List.of()
+            : font.split(Component.literal(eventAnnouncementUser), maxOverlayWidth);
+        int titleLineHeight = font.lineHeight + 2;
+        int titleBlockHeight = (int) (titleLines.size() * titleLineHeight * titleScale);
+        int userBlockHeight = userLines.isEmpty() ? 0 : (4 + userLines.size() * (font.lineHeight + 1));
+        int totalBlockHeight = titleBlockHeight + userBlockHeight;
+        int titleY = Math.max(8, (screenH - totalBlockHeight) / 2);
+        drawContext.pose().pushMatrix();
+        drawContext.pose().scale(titleScale, titleScale);
+        int scaledScreenW = (int) (screenW / titleScale);
+        int scaledY = (int) (titleY / titleScale);
+        for (FormattedCharSequence line : titleLines) {
+            int lx = (scaledScreenW - font.width(line)) / 2;
+            drawContext.drawString(font, line, lx, scaledY, CommonColors.WHITE, true);
+            scaledY += titleLineHeight;
+        }
+        drawContext.pose().popMatrix();
+
+        // User name below title (normal size), when available.
+        if (!userLines.isEmpty()) {
+            int userY = titleY + titleBlockHeight + 4;
+            for (FormattedCharSequence userLine : userLines) {
+                int userX = (screenW - font.width(userLine)) / 2;
+                drawContext.drawString(font, userLine, userX, userY, CommonColors.WHITE, true);
+                userY += font.lineHeight + 1;
+            }
+        }
+    }
+
     public void endChaos() {
+        eventAnnouncementTitle = null;
+        eventAnnouncementUser = null;
+        eventAnnouncementTicksLeft = 0;
 
         SopramodClient.LOGGER.info("Ending events...");
         currentEvents.forEach(event -> {
