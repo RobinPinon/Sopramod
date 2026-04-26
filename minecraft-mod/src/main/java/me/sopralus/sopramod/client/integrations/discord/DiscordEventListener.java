@@ -18,6 +18,7 @@
 package com.poc.sopramod.client.integrations.discord;
 
 import com.poc.sopramod.client.SopramodClient;
+import net.minecraft.client.resources.language.I18n;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
@@ -56,7 +57,7 @@ public class DiscordEventListener extends ListenerAdapter {
             discordIntegration.channel = msg.getChannel();
             SopramodClient.getInstance().integrationsSettings.discord.channel=msg.getChannel().getIdLong();
             SopramodClient.getInstance().saveSettings();
-            discordIntegration.channel.sendMessage("Joined Text Channel " + discordIntegration.channel.getName()).queue();
+            discordIntegration.channel.sendMessage(I18n.get("sopramod.discord.joined_channel", discordIntegration.channel.getName())).queue();
         }
 
     }

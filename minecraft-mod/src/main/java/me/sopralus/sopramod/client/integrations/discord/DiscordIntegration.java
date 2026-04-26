@@ -27,6 +27,7 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
 
@@ -49,10 +50,12 @@ public class DiscordIntegration implements Integration {
     @Override
     public void start() {
         try {
-            jda = JDABuilder.createDefault(SopramodClient.getInstance().integrationsSettings.discord.token).setActivity(Activity.playing("Sopramod: Chaos Mod")).build();
+            jda = JDABuilder.createDefault(SopramodClient.getInstance().integrationsSettings.discord.token)
+                .setActivity(Activity.playing(I18n.get("sopramod.title")))
+                .build();
             jda.addEventListener(new DiscordEventListener(this));
         } catch(Exception e) {
-            System.err.println("Error occured while connecting to Discord");
+            System.err.println(I18n.get("sopramod.discord.connect_error"));
             e.printStackTrace();
         }
 
@@ -71,13 +74,13 @@ public class DiscordIntegration implements Integration {
         EmbedBuilder poll = new EmbedBuilder();
         Random random = new Random();
         poll.setColor(new Color(random.nextInt(255),random.nextInt(255),random.nextInt(255)));
-        poll.setDescription("Sopramod: Chaos Mod");
-        poll.setTitle("\uD83D\uDDF3️ Vote For The Next Event");
+        poll.setDescription(I18n.get("sopramod.title"));
+        poll.setTitle("\uD83D\uDDF3️ " + I18n.get("sopramod.discord.poll_title"));
         poll.addField(getReaction(voteID, 1) + "  " + events.get(0).getString(), "", false);
         poll.addField(getReaction(voteID, 2) + "  " + events.get(1).getString(), "", false);
         poll.addField(getReaction(voteID, 3) + "  " + events.get(2).getString(), "", false);
         poll.addField(getReaction(voteID, 4) + "  " + events.get(3).getString(), "", false);
-        poll.setFooter("React to this message with one of these emojis","https://media.forgecdn.net/avatars/356/538/637516966184620115.png");
+        poll.setFooter(I18n.get("sopramod.discord.poll_footer"), "https://media.forgecdn.net/avatars/356/538/637516966184620115.png");
         try{
             this.channel.sendMessageEmbeds(poll.build()).queue(message -> {
                 setLastId(message.getIdLong());
@@ -87,7 +90,7 @@ public class DiscordIntegration implements Integration {
                 message.addReaction(Emoji.fromUnicode(getReaction(voteID, 4))).queue();
             });
         }catch (NullPointerException e){
-            System.err.println("Could not send discord poll. Channel was null.");
+            System.err.println(I18n.get("sopramod.discord.poll_channel_null"));
         }
     }
 

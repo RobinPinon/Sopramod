@@ -98,7 +98,7 @@ public class ServerEventHandler {
                 Optional<Event> event;
                 if (settings.integrations) {
                     if (voting.events.isEmpty()) {
-                        Sopramod.LOGGER.info("[Chat Integrations] No random event available");
+                        Sopramod.LOGGER.info("[Intégrations chat] Aucun événement aléatoire disponible");
                         event = Optional.empty();
                     } else {
                         int winner = voting.getWinner();
@@ -107,9 +107,9 @@ public class ServerEventHandler {
                         else    // Get winner
                             event = Optional.of(voting.events.get(winner));
                         if (event.isPresent()) {
-                            Sopramod.LOGGER.info("[Chat Integrations] Winner event: {}", event.get().getDescription().getString());
+                            Sopramod.LOGGER.info("[Intégrations chat] Événement gagnant : {}", event.get().getDescription().getString());
                         } else {
-                            Sopramod.LOGGER.info("[Chat Integrations] No selectable event");
+                            Sopramod.LOGGER.info("[Intégrations chat] Aucun événement sélectionnable");
                         }
                     }
                 } else {
@@ -150,7 +150,7 @@ public class ServerEventHandler {
                 .findFirst();
 
             if (eventType.isEmpty()) {
-                Sopramod.LOGGER.warn("Forced event ignored, unknown id: {}", req.eventId());
+                Sopramod.LOGGER.warn("Événement forcé ignoré, id inconnu : {}", req.eventId());
                 continue;
             }
 
@@ -158,7 +158,7 @@ public class ServerEventHandler {
             String by = (req.triggeredBy() == null || req.triggeredBy().isBlank()) ? "killer" : req.triggeredBy();
             if (runEvent(event, by)) {
                 resetTimer();
-                Sopramod.LOGGER.info("Forced event executed: {} by {}", req.eventId(), by.toLowerCase(Locale.ROOT));
+                Sopramod.LOGGER.info("Événement forcé exécuté : {} par {}", req.eventId(), by.toLowerCase(Locale.ROOT));
             }
         }
     }
@@ -169,18 +169,18 @@ public class ServerEventHandler {
 
     public boolean runEvent(Event event, String triggeredBy) {
         if (event == null) {
-            Sopramod.LOGGER.info("New Event not found");
+            Sopramod.LOGGER.info("Événement introuvable");
             return false;
         }
 
         final FeatureFlagSet featureFlagSet = event.getType().requiredFeatures();
         if (!featureFlagSet.isSubsetOf(server.overworld().enabledFeatures())) {
             final Optional<String> missing = FeatureFlags.REGISTRY.toNames(featureFlagSet.subtract(server.overworld().enabledFeatures())).stream().map(Identifier::toString).reduce((s, t) -> s + ", " + t);
-            Sopramod.LOGGER.info("Tried to run event that requires disabled features, missing: {}", missing.orElse("unknown"));
+            Sopramod.LOGGER.info("Événement refusé (fonctionnalités désactivées), manquant : {}", missing.orElse("inconnu"));
             return false;
         }
 
-        Sopramod.LOGGER.info("New Event: {} total duration: {}", event.getDescription().getString(), event.getDuration());
+        Sopramod.LOGGER.info("Nouvel événement : {} — durée totale : {}", event.getDescription().getString(), event.getDuration());
         // Start the event and add it to the list.
         event.init();
         currentEvents.add(event);
@@ -243,7 +243,7 @@ public class ServerEventHandler {
 
         resetTimer();
         String label = event.getDescription().getString();
-        Sopramod.LOGGER.info("Forced event executed now: {} by {}", eventId, by.toLowerCase(Locale.ROOT));
+        Sopramod.LOGGER.info("Événement forcé immédiat : {} par {}", eventId, by.toLowerCase(Locale.ROOT));
         return new ForcedEventResult(true, "ok", eventId, label);
     }
 

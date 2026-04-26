@@ -26,7 +26,7 @@ public class OverlayServer {
             try {
                 this.overlayWebsocket.start();
             } catch (Exception e) {
-                SopramodClient.LOGGER.error("Exception while starting bot: " + e.getMessage());
+                SopramodClient.LOGGER.error("Exception au démarrage du serveur overlay : {}", e.getMessage());
                 e.printStackTrace();
             }
         });
@@ -36,7 +36,7 @@ public class OverlayServer {
         try {
             this.overlayWebsocket.stop();
         } catch (InterruptedException e) {
-            SopramodClient.LOGGER.error("Exception while stopping bot: " + e.getMessage());
+            SopramodClient.LOGGER.error("Exception à l’arrêt du serveur overlay : {}", e.getMessage());
             e.printStackTrace();
         }
         botExecutor.shutdown();

@@ -57,7 +57,7 @@ public class VotingServer {
 
         // If the received voteID does not match the current voteID, quit.
         if (this.voteID != voteID) {
-            Sopramod.LOGGER.warn("Vote Skipped, VoteID does not match ({} != {})", this.voteID, voteID);
+            Sopramod.LOGGER.warn("Vote ignoré : voteID différent ({} ≠ {})", this.voteID, voteID);
             return;
         }
 

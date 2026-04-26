@@ -62,7 +62,7 @@ public class YoutubeApi {
                         var code = query.get("code");
                         var incomingState = query.get("state");
 
-                        LOGGER.info("[Youtube authorization] Exchanging code for tokens");
+                        LOGGER.info("[YouTube auth] Échange du code contre des jetons");
 
                         boolean isSuccessful = false;
                         try {
@@ -132,7 +132,7 @@ public class YoutubeApi {
             _youtubeServer.setExecutor(null);
             _youtubeServer.start();
 
-            LOGGER.info("[Youtube authorization] Http server has started. " + _youtubeServer.getAddress().toString());
+            LOGGER.info("[YouTube auth] Serveur HTTP local démarré : {}", _youtubeServer.getAddress());
 
             var uri = new URIBuilder("https://accounts.google.com/o/oauth2/v2/auth");
             uri.addParameter("response_type", "code");
@@ -145,7 +145,7 @@ public class YoutubeApi {
             uri.addParameter("access_type", "offline");
             var url = uri.build().toString();
 
-            LOGGER.info("[Youtube authorization] Opening browser authorization");
+            LOGGER.info("[YouTube auth] Ouverture du navigateur pour l’autorisation");
             Util.getPlatform().openUri(url);
 
         } catch (Exception ex) {
@@ -160,7 +160,7 @@ public class YoutubeApi {
         if (_youtubeServer != null) {
             _youtubeServer.stop(0);
             _youtubeServer = null;
-            LOGGER.info("[Youtube authorization] Http server has stopped");
+            LOGGER.info("[YouTube auth] Serveur HTTP local arrêté");
         }
     }
 
@@ -177,7 +177,7 @@ public class YoutubeApi {
     }
 
     public static boolean refreshAccessToken(String clientId, String secret, String refreshToken) {
-        LOGGER.info("[Youtube authorization] Trying to refresh token");
+        LOGGER.info("[YouTube auth] Rafraîchissement du jeton d’accès");
 
         try {
             var httpClient = HttpClients.createDefault();
@@ -192,9 +192,8 @@ public class YoutubeApi {
             var response = httpClient.execute(httpPost);
             var statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() != 200) {
-                LOGGER.error("[Youtube authorization] Failed to refresh google access token. "
-                        + statusLine.getStatusCode() + " "
-                        + statusLine.getReasonPhrase());
+                LOGGER.error("[YouTube auth] Échec du rafraîchissement du jeton : {} {}",
+                        statusLine.getStatusCode(), statusLine.getReasonPhrase());
                 return false;
             }
 
@@ -221,7 +220,7 @@ public class YoutubeApi {
 
             return false;
         } catch (Exception ex) {
-            LOGGER.error("[Youtube authorization] Failed to refresh google access token.\n" + ex);
+            LOGGER.error("[YouTube auth] Échec du rafraîchissement du jeton", ex);
             return false;
         }
     }
@@ -240,9 +239,8 @@ public class YoutubeApi {
             var response = httpClient.execute(httpGet);
             var statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() != 200) {
-                LOGGER.error("[Youtube authorization] Failed to get live broadcasts. "
-                        + statusLine.getStatusCode() + " "
-                        + statusLine.getReasonPhrase());
+                LOGGER.error("[YouTube auth] Impossible de récupérer les diffusions : {} {}",
+                        statusLine.getStatusCode(), statusLine.getReasonPhrase());
                 return null;
             }
 
@@ -282,9 +280,8 @@ public class YoutubeApi {
             var response = httpClient.execute(httpGet);
             var statusLine = response.getStatusLine();
             if (statusLine.getStatusCode() != 200) {
-                LOGGER.error("[Youtube authorization] Failed to get chat messages. "
-                        + statusLine.getStatusCode() + " "
-                        + statusLine.getReasonPhrase());
+                LOGGER.error("[YouTube auth] Impossible de récupérer les messages du chat : {} {}",
+                        statusLine.getStatusCode(), statusLine.getReasonPhrase());
                 return null;
             }
 

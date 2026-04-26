@@ -30,6 +30,7 @@ import com.poc.sopramod.networking.ServerboundTwitchChaosRedeem;
 import com.poc.sopramod.networking.ServerboundTwitchEventRedeem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
 import org.pircbotx.Configuration;
@@ -145,10 +146,10 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
             try {
                 ircChatBot.startBot();
             } catch (IOException e) {
-                SopramodClient.LOGGER.error("IO Exception while starting bot: " + e.getMessage());
+                SopramodClient.LOGGER.error("Erreur d’E/S au démarrage du bot IRC : {}", e.getMessage());
                 e.printStackTrace();
             } catch (IrcException e) {
-                SopramodClient.LOGGER.error("IRC Exception while starting bot: " + e.getMessage());
+                SopramodClient.LOGGER.error("Erreur IRC au démarrage du bot : {}", e.getMessage());
                 e.printStackTrace();
             }
         });
@@ -172,7 +173,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
 
     @Override
     public void onConnectAttemptFailed(ConnectAttemptFailedEvent event) {
-        SopramodClient.LOGGER.error("[Twitch] Échec de connexion IRC: {}", event.getConnectExceptions());
+        SopramodClient.LOGGER.error("[Twitch] Échec de connexion IRC : {}", event.getConnectExceptions());
     }
 
     @Override
@@ -190,7 +191,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
     public void onJoin(JoinEvent event) {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastJoinMessage > 30000) {
-            votingClient.sendMessage("Connecté à Sopramod");
+            votingClient.sendMessage(I18n.get("sopramod.chat.twitch_connected"));
             lastJoinMessage = currentTime;
         }
     }
@@ -209,7 +210,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
             return;
         }
         int altOffset = voteID % 2 == 0 ? 4 : 0;
-        StringBuilder stringBuilder = new StringBuilder("Current poll:");
+        StringBuilder stringBuilder = new StringBuilder(I18n.get("sopramod.chat.current_poll"));
         for (int i = 0; i < events.size(); i++)
             stringBuilder.append(String.format("[ %d - %s ] ", 1 + i + altOffset, events.get(i).getString()));
         ircChatBot.sendIRC().message("#" + settings.twitch.channel.toLowerCase(), "/me [Sopramod Bot] " + stringBuilder);
@@ -422,7 +423,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
                 .build();
             HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
             if (res.statusCode() < 200 || res.statusCode() >= 300) {
-                SopramodClient.LOGGER.warn("Twitch token validate failed: HTTP {}", res.statusCode());
+                SopramodClient.LOGGER.warn("[Twitch] Validation du token : échec HTTP {}", res.statusCode());
                 return null;
             }
             JsonObject o = JsonParser.parseString(res.body()).getAsJsonObject();
@@ -430,7 +431,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
                 return o.get("client_id").getAsString();
             }
         } catch (Exception e) {
-            SopramodClient.LOGGER.warn("Twitch token validate: {}", e.getMessage());
+            SopramodClient.LOGGER.warn("[Twitch] Validation du token : {}", e.getMessage());
         }
         return null;
     }
@@ -453,7 +454,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
             }
             return root.getAsJsonArray("data").get(0).getAsJsonObject().get("id").getAsString();
         } catch (Exception e) {
-            SopramodClient.LOGGER.warn("Twitch users lookup: {}", e.getMessage());
+            SopramodClient.LOGGER.warn("[Twitch] Recherche utilisateur Helix : {}", e.getMessage());
         }
         return null;
     }

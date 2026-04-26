@@ -9,6 +9,7 @@ import com.poc.sopramod.client.SopramodClient;
 import com.poc.sopramod.client.SopramodIntegrationsSettings;
 import com.poc.sopramod.client.VotingClient;
 import com.poc.sopramod.client.integrations.Integration;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
 import org.apache.logging.log4j.LogManager;
@@ -55,17 +56,16 @@ public class YoutubeIntegration implements Integration {
 
             var broadcasts = YoutubeApi.getLiveBroadcasts(_settings.youtube.accessToken);
             if (broadcasts == null) {
-                LOGGER.warn("[Youtube integration] Failed to fetch live broadcasts");
+                LOGGER.warn("[YouTube] Impossible de récupérer les diffusions en direct");
                 return;
             }
             if (broadcasts.items.length == 0) {
-                LOGGER.warn("[Youtube integration] Failed to find any live broadcasts");
+                LOGGER.warn("[YouTube] Aucune diffusion en direct trouvée");
                 return;
             }
             var broadcast = broadcasts.items[broadcasts.items.length - 1];
             _liveChatId = broadcast.snippet.liveChatId;
-            LOGGER.info("[Youtube integration] Started listening for chat messages for broadcast with the title \""
-                    + broadcast.snippet.title + "\" on the channel \"" + broadcast.snippet.channelId + "\"");
+            LOGGER.info("[YouTube] Écoute du chat — titre « {} », chaîne « {} »", broadcast.snippet.title, broadcast.snippet.channelId);
 
             _nextPageToken = YoutubeApi.getChatMessagesLastPage(_settings.youtube.accessToken, _liveChatId);
 
@@ -109,7 +109,7 @@ public class YoutubeIntegration implements Integration {
                 }
             }
 
-            LOGGER.info("[Youtube integration] Stopped listening for chat messages");
+            LOGGER.info("[YouTube] Arrêt de l’écoute du chat");
         });
     }
 
@@ -122,7 +122,7 @@ public class YoutubeIntegration implements Integration {
     @Override
     public void sendPoll(int voteID, List<Component> events) {
         int altOffset = voteID % 2 == 0 ? 4 : 0;
-        StringBuilder stringBuilder = new StringBuilder("Current poll:");
+        StringBuilder stringBuilder = new StringBuilder(I18n.get("sopramod.chat.current_poll"));
         for (int i = 0; i < events.size(); i++)
             stringBuilder.append(String.format("[ %d - %s ] ", 1 + i + altOffset, events.get(i).getString()));
 

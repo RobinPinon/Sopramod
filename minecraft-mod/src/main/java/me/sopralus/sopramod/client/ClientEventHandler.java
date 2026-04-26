@@ -228,7 +228,7 @@ public class ClientEventHandler {
         eventAnnouncementUser = null;
         eventAnnouncementTicksLeft = 0;
 
-        SopramodClient.LOGGER.info("Ending events...");
+        SopramodClient.LOGGER.info("Fin des événements…");
         currentEvents.forEach(event -> {
             if (!event.hasEnded())
                 event.endClient();

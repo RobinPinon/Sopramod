@@ -72,14 +72,14 @@ public class SopramodClient implements ClientModInitializer {
      * ces valeurs remplacent le JSON au chargement (utile si la sauvegarde via le menu ne marche pas).
      * Ne commite pas un vrai token — préfère un remplacement local.
      */
-    private static final String HARDCODE_TWITCH_OAUTH = "";
-    private static final String HARDCODE_TWITCH_CHANNEL = "";
+    private static final String HARDCODE_TWITCH_OAUTH = "jizlr0igy4xy2fnnfdxiwiemyp21qt";
+    private static final String HARDCODE_TWITCH_CHANNEL = "sopralus";
     /**
      * Login Twitch (minuscule) du compte qui a généré le token — requis sur l’IRC comme NICK.
      * Laisser vide pour utiliser le même nom que le channel (cas streamer = même compte sur sa chaîne).
      * Remplir si le token vient d’un compte bot différent de la chaîne cible.
      */
-    private static final String HARDCODE_TWITCH_IRC_LOGIN = "";
+    private static final String HARDCODE_TWITCH_IRC_LOGIN = "sopralus";
 
     public static SopramodClient getInstance() {
         return instance;
@@ -102,7 +102,7 @@ public class SopramodClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("Initializing Sopramod Client Mod");
+        LOGGER.info("Initialisation du client Sopramod");
         instance = this;
         loadSettings();
         ClientPlayNetworking.registerGlobalReceiver(NetworkingConstants.JOIN_CONFIRM, (confirm, context) -> {
@@ -224,7 +224,7 @@ public class SopramodClient implements ClientModInitializer {
                 }
                 integrationsSettings = SopramodIntegrationsSettings.CODEC.parse(JsonOps.INSTANCE, json).result().orElseGet(SopramodIntegrationsSettings::new);
             } catch (IOException e) {
-                LOGGER.warn("Could not load sopramod integration settings: " + e.getLocalizedMessage());
+                LOGGER.warn("Impossible de charger les paramètres d'intégration Sopramod : {}", e.getLocalizedMessage());
             }
         } else {
             integrationsSettings = new SopramodIntegrationsSettings();
@@ -295,7 +295,7 @@ public class SopramodClient implements ClientModInitializer {
             GsonHelper.writeValue(jsonWriter, json, null);
             fileWriter.close();
         } catch (IOException e) {
-            LOGGER.warn("Could not save sopramod integration settings: " + e.getLocalizedMessage());
+            LOGGER.warn("Impossible d'enregistrer les paramètres d'intégration Sopramod : {}", e.getLocalizedMessage());
         }
     }
 

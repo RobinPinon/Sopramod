@@ -196,7 +196,7 @@ public class Sopramod implements ModInitializer {
     public void onInitialize() {
         instance = this;
         loadSettings();
-        LOGGER.info("Sopramod Started");
+        LOGGER.info("Sopramod démarré");
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, Identifier.fromNamespaceAndPath("sopramod", "constant_color_dust"), CONSTANT_COLOR_DUST);
         localOverrideHttpServer.start();
 
@@ -236,8 +236,8 @@ public class Sopramod implements ModInitializer {
                     eventHandler.voting.sendNewPollToPlayer(player);
                 }
             } else {
-                LOGGER.warn(String.format("Player %s (%s) sopramod version (%s) does not match server sopramod version (%s). Kicking...", context.player().getName(), context.player().getStringUUID(), handshake.clientVersion(), version));
-                context.player().connection.disconnect(Component.literal(String.format("Client sopramod version (%s) does not match server version (%s).", handshake.clientVersion(), version)));
+                LOGGER.warn("Joueur {} ({}) : version client Sopramod {} ≠ serveur {} — expulsion.", context.player().getName().getString(), context.player().getStringUUID(), handshake.clientVersion(), version);
+                context.player().connection.disconnect(Component.translatable("sopramod.version_mismatch", handshake.clientVersion(), version));
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -263,7 +263,7 @@ public class Sopramod implements ModInitializer {
             context.server().execute(() -> {
                 var opt = EventRegistry.getRandomDifferentEvent(eventHandler.currentEvents);
                 if (opt.isEmpty()) {
-                    LOGGER.info("Twitch chaos redeem: aucun event aléatoire disponible (pool vide ou tout désactivé).");
+                    LOGGER.info("Rachat chaos Twitch : aucun événement aléatoire (pool vide ou tout désactivé).");
                     return;
                 }
                 Event e = opt.get().value().create();
@@ -293,7 +293,8 @@ public class Sopramod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             if (eventHandler != null)
                 eventHandler.endChaos();
-            localOverrideHttpServer.stop();
+            // Ne pas arrêter LocalOverrideHttpServer ici : start() n’est appelé qu’une fois dans onInitialize().
+            // Sinon, après retour au menu solo ou arrêt d’un monde, le port 3010 reste coupé et le dashboard ne répond plus.
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(Sopramod::deleteSaveIfRecommenceRequested);
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
@@ -329,7 +330,7 @@ public class Sopramod implements ModInitializer {
                                             }
 
                                             if(eventHandler.runEvent(event.value().create()))
-                                                Sopramod.LOGGER.warn("New event run via command: {}", event.getRegisteredName());
+                                                Sopramod.LOGGER.warn("Événement lancé via commande : {}", event.getRegisteredName());
                                             else
                                                 throw ERROR_UNKNOWN_EVENT.create(event.getRegisteredName());
                                         }
@@ -349,7 +350,7 @@ public class Sopramod implements ModInitializer {
                 settings = gson.fromJson(fileReader, SopramodSettings.class);
                 fileReader.close();
             } catch (IOException e) {
-                LOGGER.warn("Could not load sopramod settings: " + e.getLocalizedMessage());
+                LOGGER.warn("Impossible de charger la config Sopramod : {}", e.getLocalizedMessage());
             }
         } else {
             settings = new SopramodSettings();
@@ -368,7 +369,7 @@ public class Sopramod implements ModInitializer {
             fileWriter.write(gson.toJson(settings));
             fileWriter.close();
         } catch (IOException e) {
-            LOGGER.warn("Could not save sopramod settings: " + e.getLocalizedMessage());
+            LOGGER.warn("Impossible d'enregistrer la config Sopramod : {}", e.getLocalizedMessage());
             e.printStackTrace();
         }
     }
