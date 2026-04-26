@@ -7,7 +7,7 @@ POC minimal pour verifier le flux:
 ## Structure
 
 - `server` : serveur WebSocket local (`ws://localhost:3000`)
-- `minecraft-mod` : mod Fabric client (MC `1.21.2`, loader `0.19.2`)
+- `minecraft-mod` : mod Fabric (SopraMod) — version MC / loader : voir `minecraft-mod/gradle.properties`
 - `overlay/index.html` : page OBS Browser Source
 - `overlay/dashboard.html` : dashboard local avec un bouton par event
 
@@ -40,22 +40,52 @@ Dashboard de test local (1 bouton = 1 event):
 - Ouvrir `overlay/dashboard.html` dans un navigateur
 - Le dashboard appelle `http://localhost:3000/test?...` pour chaque click
 
-## 2) Lancer le mod Minecraft Fabric
+## 2) Mod Minecraft (Fabric / SopraMod)
 
-Prerequis:
+### Compiler (Gradle)
 
-- Java 21
-- Un launcher Fabric pour MC `1.21.2` avec Fabric loader `0.19.2`
-- Gradle (ou IDE qui importe Gradle)
+**Prérequis : Java 21** (Loom / Gradle du projet l’exigent ; Java 17 fera échouer la configuration).
 
-Dans `minecraft-mod`:
+Dans le dossier `minecraft-mod` :
+
+**Linux / macOS / Git Bash**
 
 ```bash
-# si gradle n'est pas installe globalement:
-JAVA_HOME="/c/Program Files/Microsoft/jdk-21.0.10.7-hotspot" PATH="$JAVA_HOME/bin:$PATH" ../.tools/gradle-8.10.2/bin/gradle build
+cd minecraft-mod
+./gradlew build
 ```
 
-Puis utiliser le jar genere dans `minecraft-mod/build/libs` avec Fabric.
+**Windows (cmd / PowerShell)**
+
+```bat
+cd minecraft-mod
+gradlew.bat build
+```
+
+Si `java -version` affiche autre chose que 21, force le JDK 21 pour cette session, puis relance le build, par exemple :
+
+**Git Bash (Windows)**
+
+```bash
+export JAVA_HOME="/c/Program Files/Microsoft/jdk-21.0.10.7-hotspot"
+export PATH="$JAVA_HOME/bin:$PATH"
+cd minecraft-mod
+./gradlew build
+```
+
+**Cibles utiles**
+
+- `compileJava` : vérifie que le code compile sans produire le JAR final
+- `build` : compile, remap, génère les artefacts dans `minecraft-mod/build/libs/`
+
+Récupère le JAR mod **prêt à l’emploi** (souvent nom du type `SopraMod-x.x-fabric*.jar` ; évite le `sources` / `dev` si plusieurs fichiers) et place-le dans le dossier `mods` de ton instance Fabric.
+
+### Lancer le jeu avec le mod
+
+Prérequis :
+
+- Java 21
+- Un launcher **Fabric** pour la version **Minecraft** indiquée dans `minecraft-mod/gradle.properties` (champ `minecraft_version`), avec le **Fabric Loader** indiqué (`loader_version`)
 
 Ce mod se connecte a `ws://localhost:3000` et affiche en chat:
 

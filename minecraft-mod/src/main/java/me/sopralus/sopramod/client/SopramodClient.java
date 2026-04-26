@@ -65,8 +65,39 @@ public class SopramodClient implements ClientModInitializer {
     public static SoundEvent herobrineAmbience = SoundEvent.createVariableRangeEvent(herobrineAmbienceID);
     public ClientEventHandler clientEventHandler;
     public SopramodIntegrationsSettings integrationsSettings;
+
+    /**
+     * Laisse vides pour utiliser uniquement le fichier
+     * {@code config/sopramod/sopramodIntegrationSettings.json}. Sinon, remplis token + chaîne ici :
+     * ces valeurs remplacent le JSON au chargement (utile si la sauvegarde via le menu ne marche pas).
+     * Ne commite pas un vrai token — préfère un remplacement local.
+     */
+    private static final String HARDCODE_TWITCH_OAUTH = "";
+    private static final String HARDCODE_TWITCH_CHANNEL = "";
+    /**
+     * Login Twitch (minuscule) du compte qui a généré le token — requis sur l’IRC comme NICK.
+     * Laisser vide pour utiliser le même nom que le channel (cas streamer = même compte sur sa chaîne).
+     * Remplir si le token vient d’un compte bot différent de la chaîne cible.
+     */
+    private static final String HARDCODE_TWITCH_IRC_LOGIN = "";
+
     public static SopramodClient getInstance() {
         return instance;
+    }
+
+    /**
+     * NICK IRC autorisé par Twitch = login du compte associé au token, pas (forcément) le nom de la chaîne cible.
+     */
+    public static String resolveTwitchIrcLogin() {
+        SopramodClient inst = getInstance();
+        if (inst == null || inst.integrationsSettings == null) {
+            return "";
+        }
+        String irc = HARDCODE_TWITCH_IRC_LOGIN == null ? "" : HARDCODE_TWITCH_IRC_LOGIN.trim();
+        if (!irc.isEmpty()) {
+            return irc.toLowerCase();
+        }
+        return inst.integrationsSettings.twitch.channel == null ? "" : inst.integrationsSettings.twitch.channel.toLowerCase();
     }
 
     @Override
@@ -199,6 +230,21 @@ public class SopramodClient implements ClientModInitializer {
             integrationsSettings = new SopramodIntegrationsSettings();
             saveSettings();
         }
+        applyHardcodedTwitchFromSource();
+    }
+
+    private void applyHardcodedTwitchFromSource() {
+        if (integrationsSettings == null) {
+            return;
+        }
+        String t = HARDCODE_TWITCH_OAUTH == null ? "" : HARDCODE_TWITCH_OAUTH.trim();
+        String c = HARDCODE_TWITCH_CHANNEL == null ? "" : HARDCODE_TWITCH_CHANNEL.trim();
+        if (t.isEmpty() || c.isEmpty()) {
+            return;
+        }
+        integrationsSettings.twitch.token = t;
+        integrationsSettings.twitch.channel = c.toLowerCase();
+        integrationsSettings.twitch.enabled = true;
     }
 
     private void convertToNewFormat(final JsonObject json) {

@@ -44,6 +44,8 @@ public class ClientEventHandler {
     /** Durée d'affichage de la bannière « event démarré » (toutes origines), en ticks client. */
     private static final int EVENT_ANNOUNCEMENT_TICKS = 100;
     private static final float VERTICAL_SCREEN_BORDER_RATIO = 0.341f;
+    /** Taille du nom du viewer sur la bannière (sous le titre, récompense chaos / forçage). */
+    private static final float EVENT_USER_NAME_SCALE = 1.15f;
 
     public List<Event> currentEvents = new ArrayList<>();
     public VotingClient votingClient;
@@ -68,6 +70,13 @@ public class ClientEventHandler {
 
         Sopramod.getInstance().settings.baseEventDuration = baseEventDuration;
 
+        if (!Sopramod.getInstance().settings.integrations) {
+            SopramodClient.LOGGER.warn(
+                "[Sopramod] Intégrations désactivées côté serveur (config/sopramod/sopramod.json → \"integrations\": true). "
+                    + "Sans cela, Twitch/Discord/YouTube ne se lancent pas.");
+        } else if (!enableIntegrations) {
+            SopramodClient.LOGGER.warn("[Sopramod] Intégrations non activées pour cette session (réponse serveur).");
+        }
         if (Sopramod.getInstance().settings.integrations && enableIntegrations) {
             votingClient = new VotingClient();
             final SopramodIntegrationsSettings integrationsSettings = SopramodClient.getInstance().integrationsSettings;
@@ -75,6 +84,10 @@ public class ClientEventHandler {
                 .filter(type -> type.settings(integrationsSettings).enabled())
                 .map(type -> type.create(this, votingClient))
                 .toList();
+            if (integrations.isEmpty()) {
+                SopramodClient.LOGGER.warn(
+                    "[Sopramod] Aucune intégration activée dans config/sopramod/sopramodIntegrationSettings.json (ex. twitch.enabled + token + channel).");
+            }
             votingClient.setIntegrations(integrations);
             votingClient.enable();
         }
@@ -171,12 +184,16 @@ public class ClientEventHandler {
         // Event title on top, rendered bigger.
         int titleMaxWidth = Math.max(30, (int) (maxOverlayWidth / titleScale));
         List<FormattedCharSequence> titleLines = font.split(eventAnnouncementTitle, titleMaxWidth);
+        int userMaxWidth = Math.max(30, (int) (maxOverlayWidth / EVENT_USER_NAME_SCALE));
         List<FormattedCharSequence> userLines = eventAnnouncementUser == null
             ? List.of()
-            : font.split(Component.literal(eventAnnouncementUser), maxOverlayWidth);
+            : font.split(Component.literal(eventAnnouncementUser), userMaxWidth);
         int titleLineHeight = font.lineHeight + 2;
+        int userLineHeight = font.lineHeight + 1;
         int titleBlockHeight = (int) (titleLines.size() * titleLineHeight * titleScale);
-        int userBlockHeight = userLines.isEmpty() ? 0 : (4 + userLines.size() * (font.lineHeight + 1));
+        int userBlockHeight = userLines.isEmpty()
+            ? 0
+            : (4 + (int) (userLines.size() * userLineHeight * EVENT_USER_NAME_SCALE));
         int totalBlockHeight = titleBlockHeight + userBlockHeight;
         int titleY = Math.max(8, (screenH - totalBlockHeight) / 2);
         drawContext.pose().pushMatrix();
@@ -190,14 +207,19 @@ public class ClientEventHandler {
         }
         drawContext.pose().popMatrix();
 
-        // User name below title (normal size), when available.
         if (!userLines.isEmpty()) {
             int userY = titleY + titleBlockHeight + 4;
+            int innerScreenW = (int) (screenW / EVENT_USER_NAME_SCALE);
+            drawContext.pose().pushMatrix();
+            drawContext.pose().translate(0.0F, (float) userY);
+            drawContext.pose().scale(EVENT_USER_NAME_SCALE, EVENT_USER_NAME_SCALE);
+            int uy = 0;
             for (FormattedCharSequence userLine : userLines) {
-                int userX = (screenW - font.width(userLine)) / 2;
-                drawContext.drawString(font, userLine, userX, userY, CommonColors.WHITE, true);
-                userY += font.lineHeight + 1;
+                int userX = (innerScreenW - font.width(userLine)) / 2;
+                drawContext.drawString(font, userLine, userX, uy, CommonColors.WHITE, true);
+                uy += userLineHeight;
             }
+            drawContext.pose().popMatrix();
         }
     }
 

@@ -51,7 +51,9 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.LevelResource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -59,6 +61,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 
 public class Sopramod implements ModInitializer {
@@ -69,11 +76,120 @@ public class Sopramod implements ModInitializer {
     private final LocalOverrideHttpServer localOverrideHttpServer = new LocalOverrideHttpServer();
     public static final ParticleType<ConstantColorDustParticleOptions> CONSTANT_COLOR_DUST = FabricParticleTypes.complex(false, ConstantColorDustParticleOptions.CODEC, ConstantColorDustParticleOptions.PACKET_CODEC);
 
+    /**
+     * Si vrai quand le serveur s’arrête, supprime les fichiers de la sauvegarde (événement {@code on_recommence}).
+     */
+    public static volatile boolean pendingWorldDelete;
+    /** Dossier racine de la sauvegarde (dossier contenant level.dat), à supprimer à l’arrêt. */
+    public static Path worldDeletePath;
+    /**
+     * Référence du serveur en cours (intégré ou dédié) pour {@code on_recommence} si l’événement tourne
+     * sans {@link ServerEventHandler} valide.
+     */
+    public static volatile MinecraftServer runningServer;
+
+    public static MinecraftServer resolveServerForChaos() {
+        if (Sopramod.getInstance().eventHandler != null && Sopramod.getInstance().eventHandler.server != null) {
+            return Sopramod.getInstance().eventHandler.server;
+        }
+        return runningServer;
+    }
+
+    public static Path resolveWorldRootPath(MinecraftServer server) {
+        Path fromRoot = server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize();
+        if (Files.isDirectory(fromRoot)) {
+            return fromRoot;
+        }
+        Path levelDat = server.getWorldPath(LevelResource.LEVEL_DATA_FILE).toAbsolutePath().normalize();
+        if (levelDat.getParent() != null) {
+            return levelDat.getParent();
+        }
+        return fromRoot;
+    }
+
     private static final DynamicCommandExceptionType ERROR_INVALID_ON_CLIENT = new DynamicCommandExceptionType(eventId -> Component.translatable("sopramod.command.invalidClientSide", eventId));
     private static final DynamicCommandExceptionType ERROR_UNKNOWN_EVENT = new DynamicCommandExceptionType(eventId -> Component.translatable("sopramod.command.unknownEvent", eventId));
 
     public static Sopramod getInstance() {
         return instance;
+    }
+
+    private static void deleteSaveIfRecommenceRequested(MinecraftServer ignored) {
+        runningServer = null;
+        if (!pendingWorldDelete) {
+            return;
+        }
+        if (worldDeletePath == null) {
+            pendingWorldDelete = false;
+            return;
+        }
+        Path root = worldDeletePath;
+        pendingWorldDelete = false;
+        worldDeletePath = null;
+        if (tryDeleteWorldFolder(root, "server_stopped")) {
+            return;
+        }
+        Thread retry = new Thread(() -> {
+            try {
+                Thread.sleep(2_000L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            if (tryDeleteWorldFolder(root, "retry_2s")) {
+                return;
+            }
+            try {
+                Thread.sleep(3_000L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            tryDeleteWorldFolder(root, "retry_5s");
+        }, "SopraMod-WorldDelete");
+        retry.setDaemon(true);
+        retry.start();
+    }
+
+    private static boolean tryDeleteWorldFolder(Path root, String phase) {
+        if (root == null) {
+            return true;
+        }
+        try {
+            if (!Files.exists(root)) {
+                LOGGER.info("Sopramod: rien à supprimer (déjà absent) phase={} chemin: {}", phase, root);
+                return true;
+            }
+            if (Files.isDirectory(root)) {
+                deleteDirectoryRecursively(root);
+            } else {
+                Files.deleteIfExists(root);
+            }
+            LOGGER.info("Sopramod: sauvegarde supprimée (ON RECOMMENCE, phase={}): {}", phase, root);
+            return true;
+        } catch (Exception e) {
+            LOGGER.error("Sopramod: suppression de la map échouée (phase={}): {} — nouvelle tentative possible.", phase, root, e);
+            return false;
+        }
+    }
+
+    private static void deleteDirectoryRecursively(Path root) throws IOException {
+        Files.walkFileTree(root, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.deleteIfExists(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException ex) throws IOException {
+                if (ex != null) {
+                    throw ex;
+                }
+                Files.deleteIfExists(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     @Override
@@ -84,17 +200,28 @@ public class Sopramod implements ModInitializer {
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, Identifier.fromNamespaceAndPath("sopramod", "constant_color_dust"), CONSTANT_COLOR_DUST);
         localOverrideHttpServer.start();
 
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            runningServer = server;
+            if (eventHandler == null) {
+                eventHandler = new ServerEventHandler();
+                eventHandler.init(server);
+            }
+        });
+
         ServerPlayNetworking.registerGlobalReceiver(NetworkingConstants.JOIN_HANDSHAKE, (handshake, context) -> {
             String version = FabricLoader.getInstance().getModContainer("sopramod").get().getMetadata().getVersion().getFriendlyString();
             if (version.equals(handshake.clientVersion())) {
                 final ClientboundJoinConfirm confirm = new ClientboundJoinConfirm(settings.timerDuration, settings.baseEventDuration, settings.integrations);
                 final ServerPlayer player = context.player();
                 ServerPlayNetworking.send(player, confirm);
-                if (PlayerLookup.all(context.server()).size() == 1) {
+                if (eventHandler == null) {
                     eventHandler = new ServerEventHandler();
                     eventHandler.init(context.server());
                 }
 
+                if (eventHandler == null) {
+                    return;
+                }
                 List<Event> currentEvents = eventHandler.currentEvents;
                 if (!currentEvents.isEmpty()) {
                     ClientboundJoinSync sync = new ClientboundJoinSync(currentEvents.stream().map(currentEvent -> new ClientboundJoinSync.EventData(
@@ -129,6 +256,36 @@ public class Sopramod implements ModInitializer {
             context.server().execute(() -> eventHandler.voting.receiveVotes(votes.voteId(), votes.votes()));
         });
 
+        ServerPlayNetworking.registerGlobalReceiver(NetworkingConstants.TWITCH_CHAOS_REDEEM, (payload, context) -> {
+            if (eventHandler == null) {
+                return;
+            }
+            context.server().execute(() -> {
+                var opt = EventRegistry.getRandomDifferentEvent(eventHandler.currentEvents);
+                if (opt.isEmpty()) {
+                    LOGGER.info("Twitch chaos redeem: aucun event aléatoire disponible (pool vide ou tout désactivé).");
+                    return;
+                }
+                Event e = opt.get().value().create();
+                if (eventHandler.runEvent(e, payload.redeemerLogin())) {
+                    eventHandler.resetTimer();
+                }
+            });
+        });
+        ServerPlayNetworking.registerGlobalReceiver(NetworkingConstants.TWITCH_NAMED_EVENT_REDEEM, (payload, context) -> {
+            if (eventHandler == null) {
+                return;
+            }
+            String eventId = payload.eventId() == null ? "" : payload.eventId().trim();
+            String by = payload.redeemerLogin() == null ? "" : payload.redeemerLogin().trim();
+            if (eventId.isEmpty()) {
+                return;
+            }
+            final String fEventId = eventId;
+            final String fBy = by.isEmpty() ? "twitch" : by;
+            context.server().execute(() -> eventHandler.forceEventNow(fEventId, fBy));
+        });
+
         ServerTickEvents.START_SERVER_TICK.register(server -> {
             if (eventHandler != null)
                 eventHandler.tick(false);
@@ -138,6 +295,7 @@ public class Sopramod implements ModInitializer {
                 eventHandler.endChaos();
             localOverrideHttpServer.stop();
         });
+        ServerLifecycleEvents.SERVER_STOPPED.register(Sopramod::deleteSaveIfRecommenceRequested);
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(LiteralArgumentBuilder.<CommandSourceStack>literal("sopramod")
                     .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))

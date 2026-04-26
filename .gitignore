@@ -13,3 +13,6 @@ minecraft-mod/run/
 # IDE / OS
 .DS_Store
 Thumbs.db
+
+# Secrets locaux (scripts)
+scripts/twitch-helix.env

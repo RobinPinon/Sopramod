@@ -109,6 +109,7 @@ import com.poc.sopramod.events.db.MiningSightEvent;
 import com.poc.sopramod.events.db.MouseDriftingEvent;
 import com.poc.sopramod.events.db.NightVisionEvent;
 import com.poc.sopramod.events.db.NoAttackingEvent;
+import com.poc.sopramod.events.db.OnRecommenceEvent;
 import com.poc.sopramod.events.db.NoDropsEvent;
 import com.poc.sopramod.events.db.NoJumpEvent;
 import com.poc.sopramod.events.db.NoUseKeyEvent;
@@ -375,6 +376,7 @@ public class EventRegistry {
         register(registry, "bouncy_blocks", BouncyBlocksEvent.TYPE);
         register(registry, "balloon_race", BalloonRaceEvent.TYPE);
         register(registry, "rainbow_fog", RainbowFogEvent.TYPE);
+        register(registry, "on_recommence", OnRecommenceEvent.TYPE);
         return FabricRegistryBuilder.from(registry).buildAndRegister();
     }
 
@@ -390,6 +392,7 @@ public class EventRegistry {
 
         List<Holder.Reference<EventType<?>>> eventCandidates = EVENTS.listElements().collect(Collectors.toList());
         Set<ResourceKey<EventType<?>>> eventsToRemove = new HashSet<>(Sopramod.getInstance().settings.disabledEventTypes);
+        eventsToRemove.add(getEventId(OnRecommenceEvent.TYPE));
         Set<EventCategory> ignoredEventCategories = new HashSet<>();
 
         currentEvents.forEach(event -> {

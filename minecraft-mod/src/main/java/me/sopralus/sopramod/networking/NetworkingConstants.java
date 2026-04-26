@@ -35,6 +35,8 @@ public class NetworkingConstants {
     public static final CustomPacketPayload.Type<ClientboundNewPoll> NEW_POLL = registerS2C("new-poll", ClientboundNewPoll.CODEC);
     public static final CustomPacketPayload.Type<ClientboundPollStatus> POLL_STATUS = registerS2C("poll-status", ClientboundPollStatus.CODEC);
     public static final CustomPacketPayload.Type<ServerboundVotes> VOTES = registerC2S("votes", ServerboundVotes.CODEC);
+    public static final CustomPacketPayload.Type<ServerboundTwitchChaosRedeem> TWITCH_CHAOS_REDEEM = registerC2S("twitch-chaos-redeem", ServerboundTwitchChaosRedeem.CODEC);
+    public static final CustomPacketPayload.Type<ServerboundTwitchEventRedeem> TWITCH_NAMED_EVENT_REDEEM = registerC2S("twitch-named-event-redeem", ServerboundTwitchEventRedeem.CODEC);
 
     private static <T extends CustomPacketPayload> CustomPacketPayload.Type<T> registerC2S(String name, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
         final CustomPacketPayload.Type<T> type = register(name);

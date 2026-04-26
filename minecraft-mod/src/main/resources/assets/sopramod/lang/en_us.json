@@ -161,6 +161,8 @@
   "events.sopramod.rainbow_path": "Rainbow Path",
   "events.sopramod.silence": "Silence",
   "events.sopramod.nothing": "Nothing",
+  "events.sopramod.on_recommence": "ON RECOMMENCE !!",
+  "sopramod.world_reset.kick": "Sopramod: world reset — rejoin to a fresh world (restart the server or create a new world in single player).",
   "events.sopramod.rainbow_trails": "Rainbow Trails",
   "events.sopramod.rainbow_sheep_everywhere": "jeb_",
   "events.sopramod.armor_trim": "Trimmed",

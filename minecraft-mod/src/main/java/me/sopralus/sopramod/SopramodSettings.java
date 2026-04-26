@@ -51,7 +51,7 @@ public class SopramodSettings {
     }
     public short timerDuration = 900;
     public short baseEventDuration = 600;
-    public boolean integrations = false;
+    public boolean integrations = true;
     public VotingMode votingMode = VotingMode.PROPORTIONAL;
     public UIStyle UIstyle = UIStyle.GTAV;
     public List<ResourceKey<EventType<?>>> disabledEventTypes = new ArrayList<>();
