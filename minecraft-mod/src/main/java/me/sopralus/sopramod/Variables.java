@@ -61,4 +61,6 @@ public class Variables {
     public static int isOnePunchActivated = 0;
     public static boolean rainbowSheepEverywhere = false;
     public static boolean bouncyBlocks = false;
+    /** Client : remappe chaque son joué vers un SoundEvent aléatoire du jeu. */
+    public static boolean randomSoundsChaos = false;
 }

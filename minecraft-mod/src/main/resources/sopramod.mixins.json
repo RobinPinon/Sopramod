@@ -32,7 +32,8 @@
     "OptionsScreenMixin",
     "ScreenEffectRendererMixin",
     "SheepRendererMixin",
-    "SoundEngineMixin"
+    "SoundEngineMixin",
+    "SoundManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

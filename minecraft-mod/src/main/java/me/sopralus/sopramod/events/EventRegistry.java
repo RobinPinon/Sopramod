@@ -80,6 +80,7 @@ import com.poc.sopramod.events.db.PumpkinViewEvent;
 import com.poc.sopramod.events.db.RaidEvent;
 import com.poc.sopramod.events.db.RandomCreeperEvent;
 import com.poc.sopramod.events.db.RandomDropsEvent;
+import com.poc.sopramod.events.db.RandomSoundsEvent;
 import com.poc.sopramod.events.db.RandomTPEvent;
 import com.poc.sopramod.events.db.RemoveHeartEvent;
 import com.poc.sopramod.events.db.RollCreditsEvent;
@@ -204,6 +205,7 @@ public class EventRegistry {
         register(registry, "ultra_fov", UltraFovEvent.TYPE);
         register(registry, "sinking", SinkingEvent.TYPE);
         register(registry, "random_drops", RandomDropsEvent.TYPE);
+        register(registry, "random_sounds", RandomSoundsEvent.TYPE);
         register(registry, "remove_heart", RemoveHeartEvent.TYPE);
         register(registry, "satiation", SatiationEvent.TYPE);
         register(registry, "roll_credits", RollCreditsEvent.TYPE);
