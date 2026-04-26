@@ -110,7 +110,7 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
     public void onJoin(JoinEvent event) {
         long currentTime = System.currentTimeMillis();
         if(currentTime-lastJoinMessage>30000){
-            votingClient.sendMessage("Connected to Sopramod Mod");
+            votingClient.sendMessage("Connecté à Sopramod");
             lastJoinMessage=currentTime;
         }
 
