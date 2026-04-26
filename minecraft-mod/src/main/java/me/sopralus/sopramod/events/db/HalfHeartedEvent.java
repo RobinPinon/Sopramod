@@ -30,9 +30,10 @@ import java.util.Map;
 
 public class HalfHeartedEvent extends AbstractTimedEvent {
     public static final EventType<HalfHeartedEvent> TYPE = EventType.builder(HalfHeartedEvent::new).category(EventCategory.HEALTH).build();
-    private Map<ServerPlayer,Health> previousHealth = new HashMap<>();
+    private Map<ServerPlayer, Health> previousHealth = new HashMap<>();
 
-    private record Health(float current, double max) {}
+    /** Vie max effective au premier tick (inclut cœurs en plus type AddHeart), pas seulement le base value de l’attribut. */
+    private record Health(float currentHealth, float maxHealthEffective) {}
 
     @Override
     public void init() {
@@ -41,11 +42,13 @@ public class HalfHeartedEvent extends AbstractTimedEvent {
 
     private void adjustPlayerHealth(ServerPlayer serverPlayerEntity) {
         AttributeInstance maxHealthAttribute = serverPlayerEntity.getAttribute(Attributes.MAX_HEALTH);
-        previousHealth.computeIfAbsent(serverPlayerEntity, player -> new Health(player.getHealth(), maxHealthAttribute.getBaseValue()));
-        maxHealthAttribute.setBaseValue(1);
+        previousHealth.computeIfAbsent(serverPlayerEntity, player ->
+            new Health(player.getHealth(), player.getMaxHealth()));
+        maxHealthAttribute.setBaseValue(1.0);
 
-        if (serverPlayerEntity.getHealth() > 1)
-            serverPlayerEntity.setHealth(1);
+        if (serverPlayerEntity.getHealth() > 1.0F) {
+            serverPlayerEntity.setHealth(1.0F);
+        }
     }
 
     @Override
@@ -58,8 +61,9 @@ public class HalfHeartedEvent extends AbstractTimedEvent {
     public void endPlayer(ServerPlayer player) {
         Health health = previousHealth.get(player);
         if (health != null) {
-            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(health.max());
-            player.setHealth(health.current());
+            float cap = health.maxHealthEffective();
+            player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(cap);
+            player.setHealth(Math.min(health.currentHealth(), cap));
         }
     }
 

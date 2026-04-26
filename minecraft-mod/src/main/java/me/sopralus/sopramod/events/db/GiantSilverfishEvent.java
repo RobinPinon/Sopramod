@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class GiantSilverfishEvent extends AbstractInstantEvent {
 
-    private static final double TARGET_HEIGHT_BLOCKS = 7.0;
+    private static final double TARGET_HEIGHT_BLOCKS = 2.0;
 
     public static final EventType<GiantSilverfishEvent> TYPE = EventType.builder(GiantSilverfishEvent::new).build();
 
