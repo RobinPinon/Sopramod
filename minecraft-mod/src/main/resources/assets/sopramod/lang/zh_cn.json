@@ -15,6 +15,7 @@
   "events.sopramod.force_jump": "强制跳跃",
   "events.sopramod.force_jump_extreme": "强制跳跃 Plus",
   "events.sopramod.teleport_heaven": "到达天堂",
+  "events.sopramod.teleport_random_dimension": "随机传送到另一维度（主世界、下界或末地）",
   "events.sopramod.extreme_explosion": "大爆炸!",
   "events.sopramod.tnt": "TNT!",
   "events.sopramod.roll_credits": "结束了?",

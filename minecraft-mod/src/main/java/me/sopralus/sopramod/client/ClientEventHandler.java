@@ -41,6 +41,8 @@ import java.util.List;
 
 public class ClientEventHandler {
 
+    /** Nombre max d'événements affichés dans la file (les plus récents), toutes origines confondues. */
+    private static final int MAX_VISIBLE_QUEUE_EVENTS = 5;
     /** Durée d'affichage de la bannière « event démarré » (toutes origines), en ticks client. */
     private static final int EVENT_ANNOUNCEMENT_TICKS = 100;
     private static final float VERTICAL_SCREEN_BORDER_RATIO = 0.341f;
@@ -140,9 +142,11 @@ public class ClientEventHandler {
         /// it will be interesting to adapt the event queue and poll rendering too
         renderer.renderTimer(drawContext, width, time, timerDuration);
 
-        // Render Event Queue...
+        // Render Event Queue (max 5 : les plus récents, y compris événements forcés / Twitch / rachats).
         int y = 20;
-        for (Event event : currentEvents) {
+        int from = Math.max(0, currentEvents.size() - MAX_VISIBLE_QUEUE_EVENTS);
+        for (int i = from; i < currentEvents.size(); i++) {
+            Event event = currentEvents.get(i);
             if (event.alwaysShowDescription() || !Variables.doNotShowEvents) {
                 event.renderQueueItem(drawContext, y);
                 y += 13;

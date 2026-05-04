@@ -30,6 +30,7 @@ import com.poc.sopramod.networking.ClientboundRemoveEnded;
 import com.poc.sopramod.networking.NetworkingConstants;
 import com.poc.sopramod.server.ConstantColorDustParticleOptions;
 import com.poc.sopramod.server.LocalOverrideHttpServer;
+import com.poc.sopramod.server.PlayerHeartStorage;
 import com.poc.sopramod.server.ServerEventHandler;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
@@ -72,6 +73,7 @@ public class Sopramod implements ModInitializer {
     public static final Logger LOGGER = LogManager.getLogger();
     public static Sopramod instance;
     public ServerEventHandler eventHandler;
+    public final PlayerHeartStorage playerHeartStorage = new PlayerHeartStorage();
     public SopramodSettings settings;
     private final LocalOverrideHttpServer localOverrideHttpServer = new LocalOverrideHttpServer();
     public static final ParticleType<ConstantColorDustParticleOptions> CONSTANT_COLOR_DUST = FabricParticleTypes.complex(false, ConstantColorDustParticleOptions.CODEC, ConstantColorDustParticleOptions.PACKET_CODEC);
@@ -202,6 +204,7 @@ public class Sopramod implements ModInitializer {
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             runningServer = server;
+            playerHeartStorage.bindToWorld(resolveWorldRootPath(server));
             if (eventHandler == null) {
                 eventHandler = new ServerEventHandler();
                 eventHandler.init(server);
@@ -249,6 +252,9 @@ public class Sopramod implements ModInitializer {
                 eventHandler = null;
             }
         });
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+            playerHeartStorage.applySavedOrRememberCurrent(handler.player)
+        );
 
         ServerPlayNetworking.registerGlobalReceiver(NetworkingConstants.VOTES, (votes, context) -> {
             if (eventHandler == null || eventHandler.voting == null)

@@ -72,7 +72,7 @@ public class SopramodClient implements ClientModInitializer {
      * ces valeurs remplacent le JSON au chargement (utile si la sauvegarde via le menu ne marche pas).
      * Ne commite pas un vrai token — préfère un remplacement local.
      */
-    private static final String HARDCODE_TWITCH_OAUTH = "jizlr0igy4xy2fnnfdxiwiemyp21qt";
+    private static final String HARDCODE_TWITCH_OAUTH = "d4xcnxfgx5zkosvsenuft7eajzgvnd";
     private static final String HARDCODE_TWITCH_CHANNEL = "sopralus";
     /**
      * Login Twitch (minuscule) du compte qui a généré le token — requis sur l’IRC comme NICK.
@@ -112,18 +112,19 @@ public class SopramodClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(NetworkingConstants.JOIN_SYNC, (sync, context) -> {
             if (clientEventHandler == null)
                 return;
-
-            if (sync.events().size() == clientEventHandler.currentEvents.size())
-                return;
-            for (final ClientboundJoinSync.EventData data : sync.events()) {
-                Event event = data.event();
-                EventType<?> type = event.getType();
-                event.setEnded(data.ended());
-                event.setTickCount(data.tickCount());
-                if (data.tickCount() > 0 && !data.ended() && type.isEnabled())
-                    event.initClient();
-                context.client().execute(() -> clientEventHandler.currentEvents.add(event));
-            }
+            context.client().execute(() -> {
+                clientEventHandler.currentEvents.clear();
+                for (final ClientboundJoinSync.EventData data : sync.events()) {
+                    Event event = data.event();
+                    EventType<?> type = event.getType();
+                    event.setEnded(data.ended());
+                    event.setTickCount(data.tickCount());
+                    if (data.tickCount() > 0 && !data.ended() && type.isEnabled()) {
+                        event.initClient();
+                    }
+                    clientEventHandler.currentEvents.add(event);
+                }
+            });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(NetworkingConstants.TICK, (tick, context) -> {

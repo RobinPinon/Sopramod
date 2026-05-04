@@ -14,7 +14,7 @@ public class MinecraftUIRenderer implements UIRenderer {
 
     public MinecraftUIRenderer() {
         UUID uuid = Mth.createInsecureUUID();
-        this.bar=new LerpingBossEvent(uuid,Component.translatable("sopramod.title"), 0, BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.NOTCHED_20,false,false, false);
+        this.bar = new LerpingBossEvent(uuid, Component.empty(), 0, BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.NOTCHED_20, false, false, false);
         ((BossHealthOverlayAccessor) Minecraft.getInstance().gui.getBossOverlay()).getEvents().put(uuid,bar);
     }
 

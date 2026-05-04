@@ -32,6 +32,7 @@ import java.util.List;
 
 public class VotingClient {
 
+    private static final int VOTE_ROW_BACKGROUND_COLOR = ARGB.color(170, 20, 30, 48);
     private final int size = 4;
     List<Component> events;
     int[] votes;
@@ -151,7 +152,7 @@ public class VotingClient {
         double ratio = this.totalVotesCount > 0 ? (double) this.totalVotes[i] / this.totalVotesCount : 0;
         final SopramodIntegrationsSettings settings = SopramodClient.getInstance().integrationsSettings;
         int altOffset = (this.voteID % 2) == 0 && settings.shouldUseAlternateOffsets() ? 4 : 0;
-        drawContext.fill(10, 31 + (i * 18), pollWidth+45+ 10 , 35 + (i * 18) + 10, ARGB.color(150,0, 0, 0));
+        drawContext.fill(10, 31 + (i * 18), pollWidth + 45 + 10, 35 + (i * 18) + 10, VOTE_ROW_BACKGROUND_COLOR);
         if(settings.showCurrentPercentage)
             drawContext.fill(10, 31 + (i * 18), 10 + Mth.floor((pollWidth+45) * ratio), (35 + (i * 18) + 10), this.getColor(150));
         drawContext.drawString(client.font, Component.translatableEscape("sopramod.votes.display",1 + i + altOffset, events.get(i)), 15, 34 + (i * 18), ARGB.color(255,255, 255, 255));

@@ -31,7 +31,8 @@ public class FakeTeleportEvent extends AbstractInstantEvent {
         SkyBlockEvent.TYPE,
         SkyEvent.TYPE,
         Teleport0Event.TYPE,
-        TeleportHeavenEvent.TYPE
+        TeleportHeavenEvent.TYPE,
+        TeleportRandomDimensionEvent.TYPE
     );
     public static final int TICKS_UNTIL_TELEPORT_BACK = 100;
     final Map<ServerPlayer,TeleportInfo> originalPositions = new HashMap<>();

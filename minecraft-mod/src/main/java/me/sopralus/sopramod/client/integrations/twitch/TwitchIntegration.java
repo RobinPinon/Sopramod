@@ -53,9 +53,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -64,6 +67,8 @@ import java.util.concurrent.Executors;
  * Résolution du nom de la récompense: tag IRC {@code custom-reward-id} + API Helix
  * (même token OAuth que le chat), sans paramètre supplémentaire. Le token doit inclure
  * {@code channel:read:redemptions} (ou {@code channel:manage:redemptions}).
+ * Cooldown 5 minutes par login et par type de récompense : le mod n’envoie pas l’événement Minecraft
+ * (les points Twitch restent côté file / à traiter manuellement sur le dashboard).
  * Récompense reconnue: un event aléatoire côté serveur
  * (même logique de pool que le timer / vote) lorsque le titre Helix est exactement
  * "DU CHAOS !!!!!!" (récompense côté Twitch / tableau des récompenses).
@@ -78,10 +83,16 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
     private static final String ON_RECOMMENCE_REWARD_TITLE = "ON RECOMMENCE !!";
     private static final String ON_RECOMMENCE_EVENT_ID = "on_recommence";
     private static final long REWARDS_CACHE_TTL_MS = 5 * 60_000L;
+    /** Délai minimum entre deux rachats du même spectateur pour une même récompense (chaos / on recommence), en ms. */
+    private static final long TWITCH_REDEMPTION_COOLDOWN_MS = Duration.ofMinutes(5).toMillis();
 
     private static final HttpClient HTTP = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
 
     private static boolean loggedMissingRedemptionScope;
+
+    private final ConcurrentHashMap<String, Long> chaosCooldownStartMsByLogin = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> recommenceCooldownStartMsByLogin = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> redeemLocksByLoginLower = new ConcurrentHashMap<>();
 
     private Configuration config;
     private final SopramodIntegrationsSettings settings = SopramodClient.getInstance().integrationsSettings;
@@ -229,6 +240,11 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
         return ARGB.color(alpha, 145, 70, 255);
     }
 
+    private Object redeemLock(String loginLower) {
+        Objects.requireNonNull(loginLower);
+        return redeemLocksByLoginLower.computeIfAbsent(loginLower, k -> new Object());
+    }
+
     private void considerChannelPointCustomRewards(MessageEvent event) {
         ImmutableMap<String, String> tags = event.getV3Tags();
         if (tags == null || !tags.containsKey("custom-reward-id")) {
@@ -245,14 +261,61 @@ public class TwitchIntegration extends ListenerAdapter implements Integration {
                 return;
             }
             String t = helixTitle.trim();
-            if (CHAOS_REWARD_TITLE.equals(t)) {
-                sendOnMainThreadChaosRedeem(userLogin);
-                return;
-            }
-            if (ON_RECOMMENCE_REWARD_TITLE.equals(t)) {
-                sendOnMainThreadNamedEventRedeem(userLogin, ON_RECOMMENCE_EVENT_ID);
+            final String redeemerLower = userLogin.toLowerCase(Locale.ROOT);
+            synchronized (redeemLock(redeemerLower)) {
+                if (CHAOS_REWARD_TITLE.equals(t)) {
+                    if (tryConsumeCooldown(redeemerLower, true)) {
+                        sendOnMainThreadChaosRedeem(redeemerLower);
+                    }
+                    return;
+                }
+                if (ON_RECOMMENCE_REWARD_TITLE.equals(t)) {
+                    if (tryConsumeCooldown(redeemerLower, false)) {
+                        sendOnMainThreadNamedEventRedeem(redeemerLower, ON_RECOMMENCE_EVENT_ID);
+                    }
+                }
             }
         });
+    }
+
+    /**
+     * @return {@code true} si la récompense peut être utilisée (cooldown enregistré et envoi Minecraft autorisé) ;
+     *         {@code false} si le spectateur est encore en cooldown (message chat uniquement, pas d’appel Helix).
+     */
+    private boolean tryConsumeCooldown(String redeemerLoginLower, boolean chaosReward) {
+        ConcurrentHashMap<String, Long> map = chaosReward ? chaosCooldownStartMsByLogin : recommenceCooldownStartMsByLogin;
+        long now = System.currentTimeMillis();
+        Long started = map.get(redeemerLoginLower);
+        if (started != null && now - started < TWITCH_REDEMPTION_COOLDOWN_MS) {
+            long remainingMs = TWITCH_REDEMPTION_COOLDOWN_MS - (now - started);
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                mc.execute(() -> notifyRedemptionCooldownInChat(redeemerLoginLower, chaosReward, remainingMs));
+            }
+            return false;
+        }
+        map.put(redeemerLoginLower, now);
+        return true;
+    }
+
+    private void notifyRedemptionCooldownInChat(String redeemerLoginLower, boolean chaosReward, long remainingMs) {
+        if (ircChatBot == null) {
+            return;
+        }
+        String rewardLangKey = chaosReward ? "sopramod.twitch.reward_name.chaos" : "sopramod.twitch.reward_name.recommence";
+        String rewardDisplay = I18n.get(rewardLangKey);
+        String timeFmt = formatCooldownRemainingHuman(remainingMs);
+        sendMessage(I18n.get("sopramod.twitch.reward_cooldown", redeemerLoginLower, rewardDisplay, timeFmt));
+    }
+
+    private static String formatCooldownRemainingHuman(long remainingMs) {
+        long secs = Math.max(1L, (remainingMs + 999L) / 1000L);
+        long minutes = secs / 60;
+        long s = secs % 60;
+        if (minutes > 0L) {
+            return minutes + " min " + s + " s";
+        }
+        return s + " s";
     }
 
     private void sendOnMainThreadChaosRedeem(String userLogin) {
